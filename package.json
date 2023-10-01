@@ -5,7 +5,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "node --test test/source.test.js"
+    "test": "node --test test/tests.js",
+    "test.watch": "node --test --watch test/tests.js"
   },
   "keywords": [],
   "author": "mariohamann",
@@ -13,6 +14,7 @@
   "dependencies": {
     "@clack/prompts": "^0.7.0",
     "@guoyunhe/downloader": "^1.3.0",
-    "dependency-tree": "^10.0.9"
+    "dependency-tree": "^10.0.9",
+    "globby": "^13.2.2"
   }
 }
