@@ -1,6 +1,3 @@
-import {
-  text,
-} from '@clack/prompts';
 import fs from 'fs';
 import { updateVsCodeReadOnlyFiles } from './update-vs-code-readonly-files.js';
 import { defaults } from './target.js';
