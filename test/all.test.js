@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { deletePathRecursively, setSource } from '../src/scripts/source.js';
 import { defaults, setTarget, removeVendors } from '../src/scripts/target.js';
+import { updateVsCodeReadOnlyFiles } from '../src/scripts/update-vs-code-readonly-files.js'
 
 const config = {
   "source": {
@@ -19,6 +20,7 @@ const config = {
       "index.js"
     ],
     "excludeDependencies": false,
+    "lockFilesForVSCode": false,
     "hooks": {
       "before": "mkdir -p ./test/target", // This could be used to e. g. create files
       "after": "", // This could be used to e. g. delete the source folder in the end
@@ -39,6 +41,7 @@ function checkIfDirExists(dirpath) {
 afterEach(async () => {
   deletePathRecursively('./test/source');
   deletePathRecursively('./test/target');
+  deletePathRecursively('./test/.vscode');
 })
 
 await test('before source hook is working', async (t) => {
@@ -162,3 +165,74 @@ await test('dependencies of included file are copied', async (t) => {
 
   assert(!await checkIfFileExists('./test/target/dependency.js'));
 });
+
+
+await test('VS Code settngs are generated in default', async (t) => {
+  await updateVsCodeReadOnlyFiles([], []);
+
+  assert(await checkIfFileExists('.vscode/settings.json'));
+
+  await deletePathRecursively('.vscode');
+});
+
+await test('VS Code settngs are generated in alternative directory if not existing', async (t) => {
+  await updateVsCodeReadOnlyFiles([], [], './test/.vscode/settings.json');
+
+  assert(await checkIfFileExists('./test/.vscode/settings.json'));
+});
+
+await test('files are removed from VS Code settings', async (t) => {
+  const oldSettings = {"files.readonlyInclude": {'to-be-removed': true, 'to-stay': true}}
+  await fs.mkdirSync('./test/.vscode', { recursive: true });
+  await fs.writeFileSync('./test/.vscode/settings.json', JSON.stringify(oldSettings, null, 4), 'utf8');
+
+  await updateVsCodeReadOnlyFiles(['to-be-removed'], [], './test/.vscode/settings.json');
+
+  assert(await checkIfFileExists('./test/.vscode/settings.json'));
+
+  const rawData = fs.readFileSync('./test/.vscode/settings.json', 'utf8');
+  const newSettings = JSON.parse(rawData);
+
+  assert(await newSettings['files.readonlyInclude']['to-stay']);
+  assert(!await newSettings['files.readonlyInclude']['to-be-removed']);
+});
+
+await test('files are added to VS Code settings', async (t) => {
+  const oldSettings = {"files.readonlyInclude": {'to-be-removed': true, 'to-stay': true}}
+  await fs.mkdirSync('./test/.vscode', { recursive: true });
+  await fs.writeFileSync('./test/.vscode/settings.json', JSON.stringify(oldSettings, null, 4), 'utf8');
+
+  await updateVsCodeReadOnlyFiles([], ['to-be-added'], './test/.vscode/settings.json');
+
+  assert(await checkIfFileExists('./test/.vscode/settings.json'));
+
+  const rawData = fs.readFileSync('./test/.vscode/settings.json', 'utf8');
+  const newSettings = JSON.parse(rawData);
+
+  assert(await newSettings['files.readonlyInclude']['to-stay']);
+  assert(await newSettings['files.readonlyInclude']['to-be-added']);
+});
+
+
+await test('files are added to VS Code settings', async (t) => {
+  const oldSettings = {"files.readonlyInclude": {'to-stay': true}}
+  await fs.mkdirSync('./test/.vscode', { recursive: true });
+  await fs.writeFileSync('./test/.vscode/settings.json', JSON.stringify(oldSettings, null, 4), 'utf8');
+
+  await setSource(config);
+
+    const overridenConfig = JSON.parse(JSON.stringify(config));
+  overridenConfig.target.lockFilesForVsCode = './test/.vscode/settings.json';
+  await setTarget(overridenConfig);
+
+  const rawData = fs.readFileSync('./test/.vscode/settings.json', 'utf8');
+  const newSettings = JSON.parse(rawData);
+
+  console.log(newSettings);
+
+  assert(await newSettings['files.readonlyInclude']['test/target/index.js']);
+  assert(await newSettings['files.readonlyInclude']['test/target/dependency.js']);
+  assert(await newSettings['files.readonlyInclude']['to-stay']);
+});
+
+
