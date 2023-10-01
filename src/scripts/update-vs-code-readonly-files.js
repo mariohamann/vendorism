@@ -15,6 +15,7 @@ export async function updateVsCodeReadOnlyFiles(remove, add, settingsPath = SETT
 
     // Remove files from files.readonlyInclude
     for (const file of remove) {
+      if(!settings['files.readonlyInclude'][file]) return;
       delete settings['files.readonlyInclude'][file];
     }
 

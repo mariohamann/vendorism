@@ -5,6 +5,7 @@ import path from 'path';
 import { deletePathRecursively, setSource } from '../src/scripts/source.js';
 import { defaults, setTarget, removeVendors } from '../src/scripts/target.js';
 import { updateVsCodeReadOnlyFiles } from '../src/scripts/update-vs-code-readonly-files.js'
+import { ejectFile } from '../src/scripts/eject.js';
 
 const config = {
   "source": {
@@ -231,8 +232,6 @@ await test('files are not added to VS Code settings in process', async (t) => {
   assert(await newSettings['files.readonlyInclude']['to-stay']);
 });
 
-
-
 await test('files are added to VS Code settings in process', async (t) => {
   const oldSettings = {"files.readonlyInclude": {'to-stay': true}}
   await fs.mkdirSync('./test/.vscode', { recursive: true });
@@ -253,3 +252,33 @@ await test('files are added to VS Code settings in process', async (t) => {
 });
 
 
+await test('ejecting removes head from files', async (t) => {
+  await fs.mkdirSync('./test/target', { recursive: true });
+  await fs.writeFileSync('./test/target/with-head.js', defaults.head + 'console.log("Hello World");', 'utf8');
+  
+  let content = fs.readFileSync('./test/target/with-head.js', 'utf8');
+  assert(await content.startsWith(config.target.head));
+  
+  ejectFile(config, './test/target/with-head.js');
+
+  content = fs.readFileSync('./test/target/with-head.js', 'utf8');
+  assert(await checkIfFileExists('./test/target/with-head.js'));
+  assert(await content === 'console.log("Hello World");');
+});
+
+await test('ejecting removes file from vscode settings', async (t) => {
+  const oldSettings = {"files.readonlyInclude": {'to-stay': true}}
+  await fs.mkdirSync('./test/.vscode', { recursive: true });
+  await fs.writeFileSync('./test/.vscode/settings.json', JSON.stringify(oldSettings, null, 4), 'utf8');
+
+  await fs.mkdirSync('./test/target', { recursive: true });
+  await fs.writeFileSync('./test/target/with-head.js', defaults.head + 'console.log("Hello World");', 'utf8');
+
+  ejectFile(config, 'test/target/with-head.js');
+
+  const rawData = fs.readFileSync('./test/.vscode/settings.json', 'utf8');
+  const newSettings = JSON.parse(rawData);
+
+  assert(await newSettings['files.readonlyInclude']['to-stay']);
+  assert(!await newSettings['files.readonlyInclude']['test/target/with-head.js']);
+});
