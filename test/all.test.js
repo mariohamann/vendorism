@@ -167,7 +167,7 @@ await test('dependencies of included file are copied', async (t) => {
 });
 
 
-await test('VS Code settngs are generated in default', async (t) => {
+await test('VS Code settings are generated in default', async (t) => {
   await updateVsCodeReadOnlyFiles([], []);
 
   assert(await checkIfFileExists('.vscode/settings.json'));
@@ -214,7 +214,26 @@ await test('files are added to VS Code settings', async (t) => {
 });
 
 
-await test('files are added to VS Code settings', async (t) => {
+await test('files are not added to VS Code settings in process', async (t) => {
+  const oldSettings = {"files.readonlyInclude": {'to-stay': true}}
+  await fs.mkdirSync('./test/.vscode', { recursive: true });
+  await fs.writeFileSync('./test/.vscode/settings.json', JSON.stringify(oldSettings, null, 4), 'utf8');
+
+  await setSource(config);
+
+  await setTarget(config);
+
+  const rawData = fs.readFileSync('./test/.vscode/settings.json', 'utf8');
+  const newSettings = JSON.parse(rawData);
+
+  assert(!await newSettings['files.readonlyInclude']['test/target/index.js']);
+  assert(!await newSettings['files.readonlyInclude']['test/target/dependency.js']);
+  assert(await newSettings['files.readonlyInclude']['to-stay']);
+});
+
+
+
+await test('files are added to VS Code settings in process', async (t) => {
   const oldSettings = {"files.readonlyInclude": {'to-stay': true}}
   await fs.mkdirSync('./test/.vscode', { recursive: true });
   await fs.writeFileSync('./test/.vscode/settings.json', JSON.stringify(oldSettings, null, 4), 'utf8');
@@ -227,8 +246,6 @@ await test('files are added to VS Code settings', async (t) => {
 
   const rawData = fs.readFileSync('./test/.vscode/settings.json', 'utf8');
   const newSettings = JSON.parse(rawData);
-
-  console.log(newSettings);
 
   assert(await newSettings['files.readonlyInclude']['test/target/index.js']);
   assert(await newSettings['files.readonlyInclude']['test/target/dependency.js']);

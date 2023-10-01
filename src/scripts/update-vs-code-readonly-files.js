@@ -29,8 +29,6 @@ export async function updateVsCodeReadOnlyFiles(remove, add, settingsPath = SETT
     // Write the updated settings back to settings.json
     await fs.mkdirSync(settingsPath.split('/').slice(0, -1).join('/'), { recursive: true });
     await fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 4), 'utf8');
-
-    console.log(`Updated ${settingsPath} successfully!`);
   } catch (error) {
     console.error('An error occurred while updating settings:', error);
   }
