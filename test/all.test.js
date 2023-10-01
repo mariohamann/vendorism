@@ -114,6 +114,8 @@ await test('included file is copied', async (t) => {
 await test('included file is copied with head', async (t) => {
   await setSource(config);
   await setTarget(config);
+  
+  assert(await checkIfFileExists('./test/target/index.js'));
 
   const content = fs.readFileSync('./test/target/index.js', 'utf8');
 
@@ -123,6 +125,8 @@ await test('included file is copied with head', async (t) => {
 await test('included file is copied with head', async (t) => {
   await setSource(config);
   await setTarget(config);
+  
+  assert(await checkIfFileExists('./test/target/index.js'));
 
   const content = fs.readFileSync('./test/target/index.js', 'utf8');
 
@@ -139,4 +143,11 @@ await test('only files with head are overriden', async (t) => {
   const content = fs.readFileSync('./test/target/index.js', 'utf8');
 
   assert(await !content.startsWith(config.target.head));
+});
+
+await test('dependencies of included file are copied', async (t) => {
+  await setSource(config);
+  await setTarget(config);
+
+  assert(await checkIfFileExists('./test/target/dependency.js'));
 });
