@@ -18,7 +18,7 @@ const config = {
     "includes": [
       "index.js"
     ],
-    "includeDependencies": true,
+    "excludeDependencies": false,
     "hooks": {
       "before": "mkdir -p ./test/target", // This could be used to e. g. create files
       "after": "", // This could be used to e. g. delete the source folder in the end
@@ -114,7 +114,7 @@ await test('included file is copied', async (t) => {
 await test('included file is copied with head', async (t) => {
   await setSource(config);
   await setTarget(config);
-  
+
   assert(await checkIfFileExists('./test/target/index.js'));
 
   const content = fs.readFileSync('./test/target/index.js', 'utf8');
@@ -150,4 +150,15 @@ await test('dependencies of included file are copied', async (t) => {
   await setTarget(config);
 
   assert(await checkIfFileExists('./test/target/dependency.js'));
+});
+
+
+await test('dependencies of included file are copied', async (t) => {
+  await setSource(config);
+  
+  const overridenConfig = JSON.parse(JSON.stringify(config));
+  overridenConfig.target.excludeDependencies = true;
+  await setTarget(overridenConfig);
+
+  assert(!await checkIfFileExists('./test/target/dependency.js'));
 });

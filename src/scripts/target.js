@@ -52,10 +52,13 @@ export async function getDependencies(config) {
 
 export async function createVendors(config) {
   
-  const dependencies = await getDependencies(config);
+  
+  const files = !config.target.excludeDependencies
+    ? await getDependencies(config)
+    : config.target.includes;
 
   let overriden = [];
-  for (const file of dependencies) {
+  for (const file of files) {
     const sourcePath = path.join(config.source.path, file);
     const targetPath = path.join(config.target.path, file);
 
@@ -89,7 +92,6 @@ export const setTarget = async (config) => {
   if (config.target?.path) {
     await removeVendors(config);
     await createVendors(config);
-    // await download(config.target.url, config.target.path, { ...config.downloadConfig, extract: true });
   }
 
   if (config.target.hooks?.after) {
