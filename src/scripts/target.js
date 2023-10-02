@@ -93,7 +93,7 @@ export async function createVendors(config) {
       continue; // skip copying
     }
 
-    const contentWithHead = defaults.head + content;
+    const contentWithHead = config.target.head + content;
 
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });
     fs.writeFileSync(targetPath, contentWithHead, 'utf8');
