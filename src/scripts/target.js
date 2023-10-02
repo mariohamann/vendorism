@@ -63,8 +63,6 @@ export async function removeVendors(config) {
 }
 
 export async function createVendors(config) {
-  
-  
   const files = !config.target.excludeDependencies
     ? await getDependencies(config)
     : config.target.includes;
@@ -72,15 +70,29 @@ export async function createVendors(config) {
   let overriden = [];
   for (const file of files) {
     const sourcePath = path.join(config.source.path, file);
-    const targetPath = path.join(config.target.path, file);
+    let targetPath = path.join(config.target.path, file);  // Initialize the variable to store the possibly transformed path
+
+    // Read source content
+    let content = fs.readFileSync(sourcePath, 'utf8');
+
+    // Apply transforms if they exist
+    if (config.target.transforms && Array.isArray(config.target.transforms)) {
+      for (const transform of config.target.transforms) {
+        const transformed = transform(targetPath, content); // Apply the transform function
+
+        if (transformed && transformed.path && transformed.content) {
+          // Update content and path with transformed values
+          content = transformed.content;
+          targetPath = transformed.path;
+        }
+      }
+    }
 
     // Check if target file already exists
     if (fs.existsSync(targetPath)) {
       continue; // skip copying
     }
 
-    // Read source content, prepend header, and write to target
-    const content = fs.readFileSync(sourcePath, 'utf8');
     const contentWithHead = defaults.head + content;
 
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });
@@ -90,6 +102,7 @@ export async function createVendors(config) {
   }
   return overriden;
 }
+
 
 
 export async function setTarget(config) {

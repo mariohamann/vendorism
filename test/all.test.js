@@ -282,3 +282,26 @@ await test('ejecting removes file from vscode settings', async (t) => {
   assert(await newSettings['files.readonlyInclude']['to-stay']);
   assert(!await newSettings['files.readonlyInclude']['test/target/with-head.js']);
 });
+
+await test('transforms are applied', async (t) => {
+  await setSource(config);
+  await setTarget({...config, target: {...config.target, transforms: [
+    (path, content) => {
+      return {path, content: content.replace('Hello', 'Goodbye')};
+    },
+    (path, content) => {
+      return {path, content: content.replace('World', 'Someone')};
+    },
+    (path, content) => {
+      return {path: path.replaceAll('dependency.js', 'transformed-dependency.js'), content: content.replaceAll('./dependency', './transformed-dependency')};
+    }
+  ]}});
+  
+  assert(await checkIfFileExists('./test/target/index.js'));
+  
+  assert(await checkIfFileExists('./test/target/transformed-dependency.js'));
+
+  const content = fs.readFileSync('./test/target/transformed-dependency.js', 'utf8');
+
+  assert(await content.includes('Goodbye Someone'));
+});
