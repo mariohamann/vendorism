@@ -115,6 +115,32 @@ await test('included file is copied', async (t) => {
   assert(await checkIfFileExists('./test/target/index.js'));
 });
 
+await test('included glob is copied', async (t) => {
+  const localConfig = getConfig();
+  localConfig.target.includes = ['index.*'];
+  localConfig.target.excludeDependencies = true;
+
+  await setSource(localConfig);
+  await setTarget(localConfig);
+
+  assert(await checkIfFileExists('./test/target/index.js'));
+  assert(!await checkIfFileExists('./test/target/dependency.js'));
+});
+
+
+await test('included glob is copied', async (t) => {
+  const localConfig = getConfig();
+  localConfig.target.includes = ['*.js'];
+  localConfig.target.excludeDependencies = true;
+
+  await setSource(localConfig);
+  await setTarget(localConfig);
+
+  assert(await checkIfFileExists('./test/target/index.js'));
+  assert(await checkIfFileExists('./test/target/dependency.js'));
+
+});
+
 await test('included file is copied with custom head', async (t) => {
   const localConfig = getConfig();
   localConfig.target.head = '/* Custom Head */\n';

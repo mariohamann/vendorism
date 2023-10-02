@@ -31,13 +31,12 @@ function optimizePathForWindows(path) {
  * 
  * @throws {Error} Throws an error if any step in the function fails.
  */
-export async function getDependencies(config) {
-  const allDeps = new Set();
+async function getDependenciesForIncludedFiles(includedFiles, config) {
+  let allDeps = new Set();
 
-  // Get dependencies for each matched file
-  for (const file of config.target.includes) {
+  for (const file of includedFiles) {
     const list = await dependencyTree.toList({
-      filename: config.source.path + '/' + file,
+      filename: path.join(config.source.path, file),
       directory: config.source.path,
       filter: path => path.indexOf('node_modules') === -1,
       noTypeDefinitions: true
@@ -45,7 +44,7 @@ export async function getDependencies(config) {
 
     list.forEach(dep => {
       // Convert the absolute path to a relative one
-      const relativePath = path.relative(config.source.path, dep).replace('../', '');
+      const relativePath = optimizePathForWindows(path.relative(config.source.path, dep).replace('../', ''));
       allDeps.add(relativePath);
     });
   }
@@ -114,7 +113,7 @@ export async function removeVendors(config) {
  * @param {Object} config - The configuration object.
  * @param {Object} config.source - The source configuration.
  * @param {Object} config.target - The target configuration.
- * @param {Array.<string>} config.target.includes - List of files to include.
+ * @param {Array.<string>} config.target.includes - List of files or globs to include.
  * @param {Array.<function>} [config.target.transforms] - List of transform functions.
  * @param {boolean} [config.target.excludeDependencies=false] - Specifies whether to exclude dependencies.
  * @param {string} [config.target.head] - The head content to prepend to target files.
@@ -124,9 +123,16 @@ export async function removeVendors(config) {
  * @throws {Error} Throws an error if any step in the function fails.
  */
 export async function createVendors(config) {
-  const files = !config.target.excludeDependencies
-    ? await getDependencies(config)
-    : config.target.includes;
+  // Resolve files from the glob patterns in includes
+  const includedFiles = await globby(config.target.includes, { cwd: config.source.path });
+
+  // If excludeDependencies is false, get the dependencies for each file resolved from the globs.
+  const dependencies = !config.target.excludeDependencies
+    ? await getDependenciesForIncludedFiles(includedFiles, config)
+    : [];
+
+  // Merge included files and their dependencies
+  const files = [...new Set([...includedFiles, ...dependencies])];
 
   let overriden = [];
   for (const file of files) {
