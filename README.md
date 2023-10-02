@@ -126,3 +126,31 @@ const localConfig = {
 	},
 };
 ```
+
+### `ejectFile`
+
+This function allows you to eject a file from being managed by the system. Ejecting involves removing a specific header from a file and optionally updating Visual Studio Code's read-only settings for the file.
+
+#### Parameters:
+
+-   `config`: The configuration object.
+    -   `target`: The target configuration.
+        -   `head` (optional): The header content that should be removed from the target file. Uses a default if not provided.
+        -   `lockFilesForVsCode` (optional): Specifies whether to update files for Visual Studio Code read-only settings. Can be a boolean or a custom path to Visual Studio Code settings.
+-   `file`: The path to the file that should be ejected.
+
+#### Usage:
+
+```javascript
+await ejectFile(
+	{
+		target: {
+			head: "/* Custom Header */",
+			lockFilesForVsCode: true,
+		},
+	},
+	"./path/to/target/file.js"
+);
+```
+
+This will remove the custom header (or the default header if not provided) from the specified file. If `lockFilesForVsCode` is set, the file's read-only status in Visual Studio Code settings will also be updated.
