@@ -14,18 +14,18 @@ function optimizePathForWindows(path) {
 }
 
 /**
- * Retrieves the dependencies of the included files based on the provided configuration.
+ * Retrieves the dependencies of the specified included files based on the provided configuration.
  * 
  * This function performs the following steps:
- * - Iterates through the includes files.
+ * - Iterates through the specified included files.
  * - Lists the dependencies of each file using `dependencyTree`.
- * - Filters out dependencies in the node_modules.
+ * - Filters out dependencies located within the node_modules directory.
  * - Converts the absolute path of each dependency to a relative one.
  * 
  * @async
+ * @param {Array.<string>} includedFiles - The list of included files for which dependencies should be retrieved.
  * @param {Object} config - The configuration object.
  * @param {Object} config.source - The source configuration containing the path.
- * @param {Array.<string>} config.target.includes - List of files to include.
  * 
  * @returns {Promise<Array.<string>>} A promise that resolves with a list of dependencies.
  * 
@@ -178,7 +178,7 @@ export async function createVendors(config) {
  * 2. Assigns a default head to the target if none is provided.
  * 3. If a target path is provided, the function:
  *    - Removes vendors based on the configuration.
- *    - Creates new vendors.
+ *    - Creates new vendors, with potential path and content transformations.
  *    - If specified in the config, updates VS Code settings for read-only files.
  * 4. Executes the after hook if provided.
  * 
@@ -191,6 +191,7 @@ export async function createVendors(config) {
  * @param {Object} [config.target.hooks] - Hooks to be executed before and after target processing.
  * @param {string} [config.target.hooks.before] - Command to be executed before target processing.
  * @param {string} [config.target.hooks.after] - Command to be executed after target processing.
+ * @param {Function[]} [config.target.transforms] - An array of transform functions that can modify content and file paths. Each function takes in the current path and content and returns an object with potentially modified path and content.
  * 
  * @returns {Promise<void>}
  * 
