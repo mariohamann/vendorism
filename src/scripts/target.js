@@ -13,6 +13,24 @@ function optimizePathForWindows(path) {
   return path.replace(/\\/g, "/");
 }
 
+/**
+ * Retrieves the dependencies of the included files based on the provided configuration.
+ * 
+ * This function performs the following steps:
+ * - Iterates through the includes files.
+ * - Lists the dependencies of each file using `dependencyTree`.
+ * - Filters out dependencies in the node_modules.
+ * - Converts the absolute path of each dependency to a relative one.
+ * 
+ * @async
+ * @param {Object} config - The configuration object.
+ * @param {Object} config.source - The source configuration containing the path.
+ * @param {Array.<string>} config.target.includes - List of files to include.
+ * 
+ * @returns {Promise<Array.<string>>} A promise that resolves with a list of dependencies.
+ * 
+ * @throws {Error} Throws an error if any step in the function fails.
+ */
 export async function getDependencies(config) {
   const allDeps = new Set();
 
@@ -35,6 +53,27 @@ export async function getDependencies(config) {
   return Array.from(allDeps);
 }
 
+/**
+ * Removes vendor files based on the provided configuration.
+ * 
+ * This function performs the following steps:
+ * - Retrieves files from the target path.
+ * - Checks if the file content starts with the specified head.
+ * - Removes files that have the specified head.
+ * - Removes empty directories recursively.
+ * 
+ * @async
+ * @param {Object} config - The configuration object.
+ * @param {Object} config.target - The target configuration.
+ * @param {string} config.target.path - The path for the target.
+ * @param {string} config.target.head - The head content to match for removal.
+ * @param {Object} [config.target.removeVendors] - Configuration for removing vendors.
+ * @param {Object} [config.target.removeVendors.globby] - Globby configuration for file pattern matching.
+ * 
+ * @returns {Promise<Array.<string>>} A promise that resolves with a list of overridden paths.
+ * 
+ * @throws {Error} Throws an error if any step in the function fails.
+ */
 export async function removeVendors(config) {
   const files = await globby(`${config.target.path}/**/*`, config.target.removeVendors?.globby || { gitignore: true }); // adjust the pattern as needed
 
@@ -61,7 +100,29 @@ export async function removeVendors(config) {
 
   return overriden;
 }
-
+/**
+ * Creates vendors based on the provided configuration.
+ * 
+ * This function performs the following steps:
+ * - Retrieves dependencies or includes files based on the excludeDependencies configuration.
+ * - Reads content from the source path.
+ * - Applies transforms to content and target path if they exist.
+ * - Skips copying if target file already exists.
+ * - Writes the file to the target path with the appropriate head.
+ * 
+ * @async
+ * @param {Object} config - The configuration object.
+ * @param {Object} config.source - The source configuration.
+ * @param {Object} config.target - The target configuration.
+ * @param {Array.<string>} config.target.includes - List of files to include.
+ * @param {Array.<function>} [config.target.transforms] - List of transform functions.
+ * @param {boolean} [config.target.excludeDependencies=false] - Specifies whether to exclude dependencies.
+ * @param {string} [config.target.head] - The head content to prepend to target files.
+ * 
+ * @returns {Promise<Array.<string>>} A promise that resolves with a list of overridden paths.
+ * 
+ * @throws {Error} Throws an error if any step in the function fails.
+ */
 export async function createVendors(config) {
   const files = !config.target.excludeDependencies
     ? await getDependencies(config)
@@ -103,8 +164,32 @@ export async function createVendors(config) {
   return overriden;
 }
 
-
-
+/**
+ * Sets up the target based on the provided configuration.
+ * 
+ * This function performs the following steps:
+ * 1. Executes the before hook if provided.
+ * 2. Assigns a default head to the target if none is provided.
+ * 3. If a target path is provided, the function:
+ *    - Removes vendors based on the configuration.
+ *    - Creates new vendors.
+ *    - If specified in the config, updates VS Code settings for read-only files.
+ * 4. Executes the after hook if provided.
+ * 
+ * @async
+ * @param {Object} config - The configuration object.
+ * @param {Object} config.target - The target configuration.
+ * @param {string} config.target.path - The path for the target.
+ * @param {string} [config.target.head] - The head content to prepend to target files. Uses a default if not provided.
+ * @param {boolean|string} [config.target.lockFilesForVsCode=false] - Specifies whether to lock files for VS Code. Can be a boolean or a custom path to VS Code settings.
+ * @param {Object} [config.target.hooks] - Hooks to be executed before and after target processing.
+ * @param {string} [config.target.hooks.before] - Command to be executed before target processing.
+ * @param {string} [config.target.hooks.after] - Command to be executed after target processing.
+ * 
+ * @returns {Promise<void>}
+ * 
+ * @throws {Error} Throws an error if any step in the function fails.
+ */
 export async function setTarget(config) {
   if (config.target.hooks?.before) {
     await execSync(config.target.hooks.before);
