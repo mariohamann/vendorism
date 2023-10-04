@@ -5,8 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "node --test test/tests.js",
-    "test.watch": "node --test --watch test/tests.js"
+    "test": "vitest"
   },
   "keywords": [],
   "author": "mariohamann",

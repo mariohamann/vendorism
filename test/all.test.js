@@ -2,9 +2,9 @@ import { expect, test, afterEach } from 'vitest';
 import assert from 'node:assert';
 import fs from 'fs';
 import path from 'path';
-import { deletePathRecursively, setSource } from '../src/scripts/source.js';
+import { setSource } from '../src/scripts/source.js';
 import { defaults, setTarget, removeVendors } from '../src/scripts/target.js';
-import { updateVsCodeReadOnlyFiles } from '../src/scripts/update-vs-code-readonly-files.js'
+import { deletePathRecursively, updateVsCodeReadOnlyFiles } from '../src/scripts/helpers.js'
 import { ejectFile } from '../src/scripts/eject.js';
 
 const getConfig = () => ({
@@ -86,10 +86,10 @@ await test('files with default head are removed', async (t) => {
   await fs.mkdirSync('./test/target', { recursive: true });
   await fs.writeFileSync('./test/target/without-head.js', 'console.log("Hello World");', 'utf8');
   await fs.writeFileSync('./test/target/with-head.js', defaults.head + 'console.log("Hello World");', 'utf8');
-  
+
   const localConfig = getConfig();
   localConfig.target.head = defaults.head;
-  
+
   await removeVendors(localConfig);
 
   assert(await checkIfFileExists('./test/target/without-head.js'));
@@ -102,7 +102,7 @@ await test('files with default head and empty folders are removed recursively', 
 
   const localConfig = getConfig();
   localConfig.target.head = defaults.head;
-  
+
   await removeVendors(localConfig);
 
   assert(!await checkIfDirExists('./test/target/sub'));
@@ -128,7 +128,7 @@ await test('included glob is copied', async (t) => {
 });
 
 
-await test('included glob is copied', async (t) => {
+await test('included glob is copied without dependencies', async (t) => {
   const localConfig = getConfig();
   localConfig.target.includes = ['*.js'];
   localConfig.target.excludeDependencies = true;
@@ -144,7 +144,7 @@ await test('included glob is copied', async (t) => {
 await test('included file is copied with custom head', async (t) => {
   const localConfig = getConfig();
   localConfig.target.head = '/* Custom Head */\n';
-  
+
   await setSource(localConfig);
   await setTarget(localConfig);
 
@@ -157,7 +157,7 @@ await test('included file is copied with custom head', async (t) => {
 await test('included file is copied with default head', async (t) => {
   await setSource(getConfig());
   await setTarget(getConfig());
-  
+
   assert(await checkIfFileExists('./test/target/index.js'));
 
   const content = fs.readFileSync('./test/target/index.js', 'utf8');
@@ -187,7 +187,7 @@ await test('dependencies of included file are copied', async (t) => {
 
 await test('dependencies of included file are not copied when excluded', async (t) => {
   await setSource(getConfig());
-  
+
   const localConfig = getConfig();
   localConfig.target.excludeDependencies = true;
   await setTarget(localConfig);
@@ -211,7 +211,7 @@ await test('VS Code settngs are generated in alternative directory if not existi
 });
 
 await test('files are removed from VS Code settings', async (t) => {
-  const oldSettings = {"files.readonlyInclude": {'to-be-removed': true, 'to-stay': true}}
+  const oldSettings = { "files.readonlyInclude": { 'to-be-removed': true, 'to-stay': true } }
   await fs.mkdirSync('./test/.vscode', { recursive: true });
   await fs.writeFileSync('./test/.vscode/settings.json', JSON.stringify(oldSettings, null, 4), 'utf8');
 
@@ -227,7 +227,7 @@ await test('files are removed from VS Code settings', async (t) => {
 });
 
 await test('files are added to VS Code settings', async (t) => {
-  const oldSettings = {"files.readonlyInclude": {'to-be-removed': true, 'to-stay': true}}
+  const oldSettings = { "files.readonlyInclude": { 'to-be-removed': true, 'to-stay': true } }
   await fs.mkdirSync('./test/.vscode', { recursive: true });
   await fs.writeFileSync('./test/.vscode/settings.json', JSON.stringify(oldSettings, null, 4), 'utf8');
 
@@ -244,7 +244,7 @@ await test('files are added to VS Code settings', async (t) => {
 
 
 await test('files are not added to VS Code settings in process', async (t) => {
-  const oldSettings = {"files.readonlyInclude": {'to-stay': true}}
+  const oldSettings = { "files.readonlyInclude": { 'to-stay': true } }
   await fs.mkdirSync('./test/.vscode', { recursive: true });
   await fs.writeFileSync('./test/.vscode/settings.json', JSON.stringify(oldSettings, null, 4), 'utf8');
 
@@ -261,13 +261,13 @@ await test('files are not added to VS Code settings in process', async (t) => {
 });
 
 await test('files are added to VS Code settings in process', async (t) => {
-  const oldSettings = {"files.readonlyInclude": {'to-stay': true}}
+  const oldSettings = { "files.readonlyInclude": { 'to-stay': true } }
   await fs.mkdirSync('./test/.vscode', { recursive: true });
   await fs.writeFileSync('./test/.vscode/settings.json', JSON.stringify(oldSettings, null, 4), 'utf8');
 
   await setSource(getConfig());
 
-    const localConfig = getConfig();
+  const localConfig = getConfig();
   localConfig.target.lockFilesForVsCode = './test/.vscode/settings.json';
   await setTarget(localConfig);
 
@@ -283,10 +283,10 @@ await test('files are added to VS Code settings in process', async (t) => {
 await test('ejecting removes head from files', async (t) => {
   await fs.mkdirSync('./test/target', { recursive: true });
   await fs.writeFileSync('./test/target/with-head.js', defaults.head + 'console.log("Hello World");', 'utf8');
-  
+
   let content = fs.readFileSync('./test/target/with-head.js', 'utf8');
   assert(await content.startsWith(defaults.head));
-  
+
   ejectFile(getConfig(), './test/target/with-head.js');
 
   content = fs.readFileSync('./test/target/with-head.js', 'utf8');
@@ -295,7 +295,7 @@ await test('ejecting removes head from files', async (t) => {
 });
 
 await test('ejecting removes file from vscode settings', async (t) => {
-  const oldSettings = {"files.readonlyInclude": {'to-stay': true}}
+  const oldSettings = { "files.readonlyInclude": { 'to-stay': true } }
   await fs.mkdirSync('./test/.vscode', { recursive: true });
   await fs.writeFileSync('./test/.vscode/settings.json', JSON.stringify(oldSettings, null, 4), 'utf8');
 
@@ -316,18 +316,18 @@ await test('content transforms are applied', async (t) => {
 
   localConfig.target.transforms = [
     (path, content) => {
-      return {path, content: content.replace('Hello', 'Goodbye')};
+      return { path, content: content.replace('Hello', 'Goodbye') };
     },
     (path, content) => {
-      return {path, content: content.replace('World', 'Someone')};
+      return { path, content: content.replace('World', 'Someone') };
     }
   ];
 
   await setSource(localConfig);
   await setTarget(localConfig);
-  
+
   assert(await checkIfFileExists('./test/target/index.js'));
-  
+
   assert(await checkIfFileExists('./test/target/dependency.js'));
 
   const content = fs.readFileSync('./test/target/dependency.js', 'utf8');
@@ -341,15 +341,15 @@ await test('file path transforms are applied', async (t) => {
 
   localConfig.target.transforms = [
     (path, content) => {
-      return {path: path.replaceAll('dependency.js', 'transformed-dependency.js'), content: content.replaceAll('./dependency', './transformed-dependency')};
+      return { path: path.replaceAll('dependency.js', 'transformed-dependency.js'), content: content.replaceAll('./dependency', './transformed-dependency') };
     }
   ];
 
   await setSource(localConfig);
   await setTarget(localConfig);
-  
+
   assert(await checkIfFileExists('./test/target/index.js'));
-  
+
   assert(await checkIfFileExists('./test/target/transformed-dependency.js'));
 
   const content = fs.readFileSync('./test/target/index.js', 'utf8');

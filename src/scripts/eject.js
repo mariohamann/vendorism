@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { updateVsCodeReadOnlyFiles } from './update-vs-code-readonly-files.js';
+import { updateVsCodeReadOnlyFiles } from './helpers.js';
 import { defaults } from './target.js';
 
 /**
