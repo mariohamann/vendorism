@@ -16,7 +16,7 @@ import { defaults } from './target.js';
  * 
  * @throws {Error} Throws an error if the function fails to eject the file.
  */
-export const ejectFile = async (config, file) => {
+export const eject = async (config, file) => {
   if (!config.target.head) {
     config.target.head = defaults.head;
   }

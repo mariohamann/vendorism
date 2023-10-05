@@ -5,7 +5,7 @@ import path from 'path';
 import { setSource } from '../src/scripts/source.js';
 import { defaults, setTarget, removeVendors } from '../src/scripts/target.js';
 import { deletePathRecursively, updateVsCodeReadOnlyFiles } from '../src/scripts/helpers.js'
-import { ejectFile } from '../src/scripts/eject.js';
+import { eject } from '../src/scripts/eject.js';
 
 const getConfig = () => ({
   "source": {
@@ -287,7 +287,7 @@ await test('ejecting removes head from files', async (t) => {
   let content = fs.readFileSync('./test/target/with-head.js', 'utf8');
   assert(await content.startsWith(defaults.head));
 
-  ejectFile(getConfig(), './test/target/with-head.js');
+  eject(getConfig(), './test/target/with-head.js');
 
   content = fs.readFileSync('./test/target/with-head.js', 'utf8');
   assert(await checkIfFileExists('./test/target/with-head.js'));
@@ -302,7 +302,7 @@ await test('ejecting removes file from vscode settings', async (t) => {
   await fs.mkdirSync('./test/target', { recursive: true });
   await fs.writeFileSync('./test/target/with-head.js', defaults.head + 'console.log("Hello World");', 'utf8');
 
-  ejectFile(getConfig(), 'test/target/with-head.js');
+  eject(getConfig(), 'test/target/with-head.js');
 
   const rawData = fs.readFileSync('./test/.vscode/settings.json', 'utf8');
   const newSettings = JSON.parse(rawData);

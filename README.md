@@ -127,7 +127,7 @@ const localConfig = {
 };
 ```
 
-### `ejectFile`
+### `eject`
 
 This function allows you to eject a file from being managed by the system. Ejecting involves removing a specific header from a file and optionally updating Visual Studio Code's read-only settings for the file.
 
@@ -142,7 +142,7 @@ This function allows you to eject a file from being managed by the system. Eject
 #### Usage:
 
 ```javascript
-await ejectFile(
+await eject(
 	{
 		target: {
 			head: "/* Custom Header */",
