@@ -196,7 +196,7 @@ export async function createVendors(config) {
  */
 export async function setTarget(config) {
   if (config.target.hooks?.before) {
-    await execSync(config.target.hooks.before);
+    await execSync(config.target.hooks.before, { stdio: 'inherit' });
   }
 
   if (!config.target.head) {
@@ -212,6 +212,6 @@ export async function setTarget(config) {
   }
 
   if (config.target.hooks?.after) {
-    await execSync(config.target.hooks.after);
+    await execSync(config.target.hooks.after, { stdio: 'inherit' });
   }
 }

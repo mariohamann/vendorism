@@ -25,7 +25,7 @@ import { execSync } from 'child_process';
  */
 export const setSource = async (config) => {
   if (config.source.hooks?.before) {
-    await execSync(config.source.hooks.before);
+    await execSync(config.source.hooks.before, { stdio: 'inherit' });
   }
 
   if (config.source.url) {
@@ -33,6 +33,8 @@ export const setSource = async (config) => {
   }
 
   if (config.source.hooks?.after) {
-    await execSync(config.source.hooks.after);
+    await execSync(config.source.hooks.after, { stdio: 'inherit' });
   }
+
+  return Promise.resolve();
 }
