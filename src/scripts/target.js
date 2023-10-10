@@ -190,11 +190,12 @@ export async function createVendors(config) {
  * @param {string} [config.target.hooks.after] - Command to be executed after target processing.
  * @param {Function[]} [config.target.transforms] - An array of transform functions that can modify content and file paths. Each function takes in the current path and content and returns an object with potentially modified path and content.
  * 
- * @returns {Promise<void>}
+ * @returns {Promise<{removedFiles: string[], newFiles: string[]}>}
  * 
  * @throws {Error} Throws an error if any step in the function fails.
  */
 export async function setTarget(config) {
+  const output = {};
   if (config.target.hooks?.before) {
     await execSync(config.target.hooks.before, { stdio: 'inherit' });
   }
@@ -204,14 +205,15 @@ export async function setTarget(config) {
   }
 
   if (config.target?.path) {
-    const oldFiles = await removeVendors(config);
-    const newFiles = await createVendors(config);
+    output.removedFiles = await removeVendors(config);
+    output.newFiles = await createVendors(config);
     if (config.target.lockFilesForVsCode) {
-      await updateVsCodeReadOnlyFiles(oldFiles, newFiles, config.target.lockFilesForVsCode === true ? undefined : config.target.lockFilesForVsCode);
+      await updateVsCodeReadOnlyFiles(output.newFiles, output.removedFiles, config.target.lockFilesForVsCode === true ? undefined : config.target.lockFilesForVsCode);
     }
   }
 
   if (config.target.hooks?.after) {
     await execSync(config.target.hooks.after, { stdio: 'inherit' });
   }
+  return output;
 }

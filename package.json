@@ -5,7 +5,8 @@
   "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "test": "vitest"
+    "test": "vitest",
+    "generate-types": "npx -p typescript tsc src/index.js --declaration --allowJs --emitDeclarationOnly --outDir ./src"
   },
   "keywords": [],
   "author": "mariohamann",

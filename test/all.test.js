@@ -184,6 +184,27 @@ await test('dependencies of included file are copied', async (t) => {
   assert(await checkIfFileExists('./test/target/dependency.js'));
 });
 
+await test('vendored files are returned as output.newFiles', async (t) => {
+  await setSource(getConfig());
+  await fs.mkdirSync('./test/target', { recursive: true });
+  await fs.writeFileSync('./test/target/index.js', 'console.log("Hello World");', 'utf8');
+
+  const target = await setTarget(getConfig());
+
+  assert(await !target.newFiles.includes('test/target/index.js'));
+  assert(await target.newFiles.includes('test/target/dependency.js'));
+});
+
+
+await test('removed files are returned as output.newFiles', async (t) => {
+  await setSource(getConfig());
+  await fs.mkdirSync('./test/target', { recursive: true });
+  await fs.writeFileSync('./test/target/with-head.js', defaults.head + 'console.log("Hello World");', 'utf8');
+
+  const target = await setTarget(getConfig());
+
+  assert(await target.removedFiles.includes('test/target/with-head.js'));
+});
 
 await test('dependencies of included file are not copied when excluded', async (t) => {
   await setSource(getConfig());
