@@ -17,7 +17,7 @@ import { execSync } from 'child_process';
  * @param {string} [config.source.hooks.after] - A hook command to run after the main process.
  * @param {string} [config.source.url] - The URL from which files should be downloaded.
  * @param {string} config.source.path - The directory to which files should be extracted.
- * @param {Object} [config.downloadConfig] - The configuration object for the download process.
+ * @param {Object} [config.source.downloadConfig] - The configuration object for the download process.
  * 
  * @returns {Promise<void>} A promise indicating completion of the function.
  * 
@@ -29,7 +29,7 @@ export const setSource = async (config) => {
   }
 
   if (config.source.url) {
-    await download(config.source.url, config.source.path, { ...config.downloadConfig, extract: true });
+    await download(config.source.url, config.source.path, { ...config.source.downloadConfig, extract: true });
   }
 
   if (config.source.hooks?.after) {
