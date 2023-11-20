@@ -1,6 +1,5 @@
 export function eject(config: {
-    target: {
-        head?: string;
-        lockFilesForVsCode?: boolean | string;
-    };
+  target: {
+    head?: string;
+  };
 }, file: string): Promise<void>;

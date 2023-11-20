@@ -1,5 +1,4 @@
 import fs from 'fs';
-import { updateVsCodeReadOnlyFiles } from './helpers.js';
 import { defaults } from './target.js';
 
 /**
@@ -9,7 +8,6 @@ import { defaults } from './target.js';
  * @param {Object} config - The configuration object.
  * @param {Object} config.target - The target configuration.
  * @param {string} [config.target.head] - The head content that should be removed from the target file. Uses a default if not provided.
- * @param {boolean|string} [config.target.lockFilesForVsCode=false] - Specifies whether to update files for VS Code read-only settings. Can be a boolean or a custom path to VS Code settings.
  * @param {string} file - The path to the file that should be ejected.
  * 
  * @returns {Promise<void>}
@@ -23,8 +21,4 @@ export const eject = async (config, file) => {
 
   const fileContent = fs.readFileSync(file, 'utf8');
   fs.writeFileSync(file, fileContent.replace(config.target.head, ''));
-
-  if (config.target.lockFilesForVsCode) {
-    await updateVsCodeReadOnlyFiles([file], [], config.target.lockFilesForVsCode === true ? undefined : config.target.lockFilesForVsCode);
-  }
 }

@@ -23,7 +23,7 @@ import { execSync } from 'child_process';
  * 
  * @throws {Error} Throws an error if any step in the function fails.
  */
-export const setSource = async (config) => {
+export const get = async (config) => {
   if (config.source.hooks?.before) {
     await execSync(config.source.hooks.before, { stdio: 'inherit' });
   }

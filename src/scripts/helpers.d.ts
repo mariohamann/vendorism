@@ -12,5 +12,4 @@
  * @throws {Error} Throws an error if deleting a directory or file fails.
  */
 export function deletePathRecursively(directory: string): void;
-export function updateVsCodeReadOnlyFiles(remove: any, add: any, settingsPath?: string): Promise<void>;
 export function optimizePathForWindows(path: any): any;

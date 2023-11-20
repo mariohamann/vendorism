@@ -20,13 +20,13 @@
  * @throws {Error} Throws an error if any step in the function fails.
  */
 export function removeVendors(config: {
-    target: {
-        path: string;
-        head: string;
-        removeVendors?: {
-            globby?: any;
-        };
+  target: {
+    path: string;
+    head: string;
+    removeVendors?: {
+      globby?: any;
     };
+  };
 }): Promise<Array<string>>;
 /**
  * Creates vendors based on the provided configuration.
@@ -53,14 +53,14 @@ export function removeVendors(config: {
  * @throws {Error} Throws an error if any step in the function fails.
  */
 export function createVendors(config: {
-    source: any;
-    target: {
-        path: string;
-        includes: Array<string>;
-        transforms?: Array<Function>;
-        excludeDependencies?: boolean;
-        head?: string;
-    };
+  source: any;
+  target: {
+    path: string;
+    includes: Array<string>;
+    transforms?: Array<Function>;
+    excludeDependencies?: boolean;
+    head?: string;
+  };
 }): Promise<Array<string>>;
 /**
  * Sets up the target based on the provided configuration.
@@ -79,7 +79,6 @@ export function createVendors(config: {
  * @param {Object} config.target - The target configuration.
  * @param {string} config.target.path - The path for the target.
  * @param {string} [config.target.head] - The head content to prepend to target files. Uses a default if not provided.
- * @param {boolean|string} [config.target.lockFilesForVsCode=false] - Specifies whether to lock files for VS Code. Can be a boolean or a custom path to VS Code settings.
  * @param {Object} [config.target.hooks] - Hooks to be executed before and after target processing.
  * @param {string} [config.target.hooks.before] - Command to be executed before target processing.
  * @param {string} [config.target.hooks.after] - Command to be executed after target processing.
@@ -89,21 +88,20 @@ export function createVendors(config: {
  *
  * @throws {Error} Throws an error if any step in the function fails.
  */
-export function setTarget(config: {
-    target: {
-        path: string;
-        head?: string;
-        lockFilesForVsCode?: boolean | string;
-        hooks?: {
-            before?: string;
-            after?: string;
-        };
-        transforms?: Function[];
+export function set(config: {
+  target: {
+    path: string;
+    head?: string;
+    hooks?: {
+      before?: string;
+      after?: string;
     };
+    transforms?: Function[];
+  };
 }): Promise<{
-    removedFiles: string[];
-    newFiles: string[];
+  removedFiles: string[];
+  newFiles: string[];
 }>;
 export namespace defaults {
-    const head: string;
+  const head: string;
 }

@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { execSync } from 'child_process';
 import dependencyTree from 'dependency-tree';
-import { updateVsCodeReadOnlyFiles, optimizePathForWindows } from './helpers.js';
+import { optimizePathForWindows } from './helpers.js';
 
 /**
  * Default values for the target configuration.
@@ -191,7 +191,6 @@ export async function createVendors(config) {
  * @param {Object} config.target - The target configuration.
  * @param {string} config.target.path - The path for the target.
  * @param {string} [config.target.head] - The head content to prepend to target files. Uses a default if not provided.
- * @param {boolean|string} [config.target.lockFilesForVsCode=false] - Specifies whether to lock files for VS Code. Can be a boolean or a custom path to VS Code settings.
  * @param {Object} [config.target.hooks] - Hooks to be executed before and after target processing.
  * @param {string} [config.target.hooks.before] - Command to be executed before target processing.
  * @param {string} [config.target.hooks.after] - Command to be executed after target processing.
@@ -201,7 +200,7 @@ export async function createVendors(config) {
  * 
  * @throws {Error} Throws an error if any step in the function fails.
  */
-export async function setTarget(config) {
+export async function set(config) {
   const output = {};
   if (config.target.hooks?.before) {
     await execSync(config.target.hooks.before, { stdio: 'inherit' });
@@ -214,9 +213,6 @@ export async function setTarget(config) {
   if (config.target?.path) {
     output.removedFiles = await removeVendors(config);
     output.newFiles = await createVendors(config);
-    if (config.target.lockFilesForVsCode) {
-      await updateVsCodeReadOnlyFiles(output.newFiles, output.removedFiles, config.target.lockFilesForVsCode === true ? undefined : config.target.lockFilesForVsCode);
-    }
   }
 
   if (config.target.hooks?.after) {

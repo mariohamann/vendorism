@@ -4,7 +4,7 @@ This library provides utilities for managing vendor files, hooks, and dependenci
 
 ## Functions
 
-### `setSource`
+### `get`
 
 This function is responsible for setting up the source based on a given configuration.
 
@@ -21,7 +21,7 @@ This function is responsible for setting up the source based on a given configur
 #### Usage:
 
 ```javascript
-await setSource({
+await get({
 	source: {
 		url: "https://example.com/source.zip",
 		path: "./path/to/extract",
@@ -33,7 +33,7 @@ await setSource({
 });
 ```
 
-### `setTarget`
+### `set`
 
 This function sets up the target based on the provided configuration.
 
@@ -43,7 +43,6 @@ This function sets up the target based on the provided configuration.
     -   `target`: The target configuration.
         -   `path`: The path for the target.
         -   `head` (optional): The header content to prepend to target files. Uses a default if not provided.
-        -   `lockFilesForVsCode` (optional): Specifies whether to lock files for VS Code. Can be a boolean or a custom path to VS Code settings.
         -   `hooks` (optional): Hooks to be executed before and after target processing.
             -   `before` (optional): Command to be executed before target processing.
             -   `after` (optional): Command to be executed after target processing.
@@ -52,11 +51,10 @@ This function sets up the target based on the provided configuration.
 #### Usage:
 
 ```javascript
-await setTarget({
+await set({
 	target: {
 		path: "./path/to/target",
 		head: "/* Custom Header */",
-		lockFilesForVsCode: true,
 		hooks: {
 			before: "echo Setting up target...",
 			after: "echo Target setup complete.",
@@ -129,14 +127,13 @@ const localConfig = {
 
 ### `eject`
 
-This function allows you to eject a file from being managed by the system. Ejecting involves removing a specific header from a file and optionally updating Visual Studio Code's read-only settings for the file.
+This function allows you to eject a file from being managed by the system. Ejecting involves removing a specific header from a file.
 
 #### Parameters:
 
 -   `config`: The configuration object.
     -   `target`: The target configuration.
         -   `head` (optional): The header content that should be removed from the target file. Uses a default if not provided.
-        -   `lockFilesForVsCode` (optional): Specifies whether to update files for Visual Studio Code read-only settings. Can be a boolean or a custom path to Visual Studio Code settings.
 -   `file`: The path to the file that should be ejected.
 
 #### Usage:
@@ -146,11 +143,10 @@ await eject(
 	{
 		target: {
 			head: "/* Custom Header */",
-			lockFilesForVsCode: true,
 		},
 	},
 	"./path/to/target/file.js"
 );
 ```
 
-This will remove the custom header (or the default header if not provided) from the specified file. If `lockFilesForVsCode` is set, the file's read-only status in Visual Studio Code settings will also be updated.
+This will remove the custom header (or the default header if not provided) from the specified file.
