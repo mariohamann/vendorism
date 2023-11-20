@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { defaults } from './target.js';
+import { defaults } from './set.js';
 
 /**
  * Ejects a file from the control of the system by removing its header and updating VS Code settings.

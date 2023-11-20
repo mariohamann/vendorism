@@ -20,13 +20,13 @@
  * @throws {Error} Throws an error if any step in the function fails.
  */
 export function removeVendors(config: {
-  target: {
-    path: string;
-    head: string;
-    removeVendors?: {
-      globby?: any;
+    target: {
+        path: string;
+        head: string;
+        removeVendors?: {
+            globby?: any;
+        };
     };
-  };
 }): Promise<Array<string>>;
 /**
  * Creates vendors based on the provided configuration.
@@ -53,14 +53,14 @@ export function removeVendors(config: {
  * @throws {Error} Throws an error if any step in the function fails.
  */
 export function createVendors(config: {
-  source: any;
-  target: {
-    path: string;
-    includes: Array<string>;
-    transforms?: Array<Function>;
-    excludeDependencies?: boolean;
-    head?: string;
-  };
+    source: any;
+    target: {
+        path: string;
+        includes: Array<string>;
+        transforms?: Array<Function>;
+        excludeDependencies?: boolean;
+        head?: string;
+    };
 }): Promise<Array<string>>;
 /**
  * Sets up the target based on the provided configuration.
@@ -89,19 +89,24 @@ export function createVendors(config: {
  * @throws {Error} Throws an error if any step in the function fails.
  */
 export function set(config: {
-  target: {
-    path: string;
-    head?: string;
-    hooks?: {
-      before?: string;
-      after?: string;
+    target: {
+        path: string;
+        head?: string;
+        hooks?: {
+            before?: string;
+            after?: string;
+        };
+        transforms?: Function[];
     };
-    transforms?: Function[];
-  };
 }): Promise<{
-  removedFiles: string[];
-  newFiles: string[];
+    removedFiles: string[];
+    newFiles: string[];
 }>;
-export namespace defaults {
-  const head: string;
-}
+/**
+ * Default values for the target configuration.
+ *
+ * @type {Object}
+ *
+ * @property {string} head - The default head content to prepend to target files.
+ */
+export const defaults: any;

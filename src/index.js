@@ -1,3 +1,3 @@
-export { get } from './scripts/source.js';
-export { set, defaults } from './scripts/target.js';
+export { get } from './scripts/get.js';
+export { set, defaults } from './scripts/set.js';
 export { eject } from './scripts/eject.js';

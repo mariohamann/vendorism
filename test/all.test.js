@@ -2,8 +2,8 @@ import { expect, test, afterEach } from 'vitest';
 import assert from 'node:assert';
 import fs from 'fs';
 import path from 'path';
-import { get } from '../src/scripts/source.js';
-import { defaults, set, removeVendors } from '../src/scripts/target.js';
+import { get } from '../src/scripts/get.js';
+import { defaults, set, removeVendors } from '../src/scripts/set.js';
 import { deletePathRecursively } from '../src/scripts/helpers.js'
 import { eject } from '../src/scripts/eject.js';
 
