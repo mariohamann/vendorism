@@ -1,12 +1,12 @@
 {
   "name": "vendorism",
-  "version": "2.0.1",
+  "version": "3.0.0",
   "description": "",
   "main": "src/index.js",
   "type": "module",
   "scripts": {
     "test": "vitest",
-    "generate-types": "npx -p typescript tsc src/*.js --declaration --allowJs --emitDeclarationOnly --outDir ./src"
+    "generate-types": "find . -name '*.d.ts' -delete && npx -p typescript tsc src/*.js --declaration --allowJs --emitDeclarationOnly --outDir ./src"
   },
   "keywords": [],
   "author": "mariohamann",

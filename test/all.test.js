@@ -214,14 +214,29 @@ await test('dependencies of included file are not copied when excluded', async (
   assert(!await checkIfFileExists('./test/target/dependency.js'));
 });
 
-await test('ejecting removes head from files', async (t) => {
+await test('ejecting removes default head from files', async (t) => {
   await fs.mkdirSync('./test/target', { recursive: true });
   await fs.writeFileSync('./test/target/with-head.js', defaults.head + 'console.log("Hello World");', 'utf8');
 
   let content = fs.readFileSync('./test/target/with-head.js', 'utf8');
   assert(await content.startsWith(defaults.head));
 
-  eject(getConfig(), './test/target/with-head.js');
+  eject('./test/target/with-head.js');
+
+  content = fs.readFileSync('./test/target/with-head.js', 'utf8');
+  assert(await checkIfFileExists('./test/target/with-head.js'));
+  assert(await content === 'console.log("Hello World");');
+});
+
+await test('ejecting removes custom head from files', async (t) => {
+  const head = '// CUSTOM HEAD';
+  await fs.mkdirSync('./test/target', { recursive: true });
+  await fs.writeFileSync('./test/target/with-head.js', head + 'console.log("Hello World");', 'utf8');
+
+  let content = fs.readFileSync('./test/target/with-head.js', 'utf8');
+  assert(await content.startsWith(head));
+
+  eject('./test/target/with-head.js', { set: { head } });
 
   content = fs.readFileSync('./test/target/with-head.js', 'utf8');
   assert(await checkIfFileExists('./test/target/with-head.js'));

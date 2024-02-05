@@ -11,7 +11,7 @@
  * @param {Object} config - The configuration object.
  * @param {Object} config.set - The target configuration.
  * @param {string} config.set.path - The path for the target.
- * @param {string} config.set.head - The head content to match for removal.
+ * @param {string} [config.set.head] - The head content to match for removal.
  * @param {Object} [config.set.removeVendors] - Configuration for removing vendors.
  * @param {Object} [config.set.removeVendors.globby] - Globby configuration for file pattern matching.
  *
@@ -20,13 +20,13 @@
  * @throws {Error} Throws an error if any step in the function fails.
  */
 export function removeVendors(config: {
-  set: {
-    path: string;
-    head: string;
-    removeVendors?: {
-      globby?: any;
+    set: {
+        path: string;
+        head?: string;
+        removeVendors?: {
+            globby?: any;
+        };
     };
-  };
 }): Promise<Array<string>>;
 /**
  * Creates vendors based on the provided configuration.
@@ -53,14 +53,14 @@ export function removeVendors(config: {
  * @throws {Error} Throws an error if any step in the function fails.
  */
 export function createVendors(config: {
-  get: any;
-  set: {
-    path: string;
-    includes: Array<string>;
-    transforms?: Array<Function>;
-    excludeDependencies?: boolean;
-    head?: string;
-  };
+    get: any;
+    set: {
+        path: string;
+        includes: Array<string>;
+        transforms?: Array<Function>;
+        excludeDependencies?: boolean;
+        head?: string;
+    };
 }): Promise<Array<string>>;
 /**
  * Sets up the target based on the provided configuration.
@@ -89,18 +89,18 @@ export function createVendors(config: {
  * @throws {Error} Throws an error if any step in the function fails.
  */
 export function set(config: {
-  set: {
-    path: string;
-    head?: string;
-    hooks?: {
-      before?: string;
-      after?: string;
+    set: {
+        path: string;
+        head?: string;
+        hooks?: {
+            before?: string;
+            after?: string;
+        };
+        transforms?: Function[];
     };
-    transforms?: Function[];
-  };
 }): Promise<{
-  removedFiles: string[];
-  newFiles: string[];
+    removedFiles: string[];
+    newFiles: string[];
 }>;
 /**
  * Default values for the set configuration.

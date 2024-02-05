@@ -68,7 +68,7 @@ async function getDependenciesForIncludedFiles(includedFiles, config) {
  * @param {Object} config - The configuration object.
  * @param {Object} config.set - The target configuration.
  * @param {string} config.set.path - The path for the target.
- * @param {string} config.set.head - The head content to match for removal.
+ * @param {string} [config.set.head] - The head content to match for removal.
  * @param {Object} [config.set.removeVendors] - Configuration for removing vendors.
  * @param {Object} [config.set.removeVendors.globby] - Globby configuration for file pattern matching.
  * 

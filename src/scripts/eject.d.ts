@@ -1,5 +1,5 @@
-export function eject(config: {
-    set: {
+export function eject(file: string, config?: {
+    set?: {
         head?: string;
     };
-}, file: string): Promise<void>;
+}): Promise<void>;

@@ -131,22 +131,19 @@ This function allows you to eject a file from being managed by the system. Eject
 
 #### Parameters:
 
--   `config`: The configuration object.
-    -   `target`: The target configuration.
-        -   `head` (optional): The header content that should be removed from the target file. Uses a default if not provided.
 -   `file`: The path to the file that should be ejected.
+-   `config (optional)`: The configuration object.
+    -   `set`: The target configuration.
+        -   `head` (optional): The header content that should be removed from the target file. Uses a default if not provided.
 
 #### Usage:
 
 ```javascript
-await eject(
-	{
-		set: {
-			head: "/* Custom Header */",
-		},
+await eject("./path/to/target/file.js", {
+	set: {
+		head: "/* Custom Header */",
 	},
-	"./path/to/target/file.js"
-);
+});
 ```
 
 This will remove the custom header (or the default header if not provided) from the specified file.
