@@ -40,7 +40,7 @@ export function removeVendors(config: {
  *
  * @async
  * @param {Object} config - The configuration object.
- * @param {Object} config.source - The source configuration.
+ * @param {Object} config.get - The source configuration.
  * @param {Object} config.set - The target configuration.
  * @param {string} config.set.path - The path for the target.
  * @param {Array.<string>} config.set.includes - List of files or globs to include.
@@ -53,7 +53,7 @@ export function removeVendors(config: {
  * @throws {Error} Throws an error if any step in the function fails.
  */
 export function createVendors(config: {
-  source: any;
+  get: any;
   set: {
     path: string;
     includes: Array<string>;
@@ -89,7 +89,7 @@ export function createVendors(config: {
  * @throws {Error} Throws an error if any step in the function fails.
  */
 export function set(config: {
-  target: {
+  set: {
     path: string;
     head?: string;
     hooks?: {
@@ -103,7 +103,7 @@ export function set(config: {
   newFiles: string[];
 }>;
 /**
- * Default values for the target configuration.
+ * Default values for the set configuration.
  *
  * @type {Object}
  *

@@ -1,5 +1,5 @@
 export function get(config: {
-    source: {
+    get: {
         hooks?: {
             before?: string;
             after?: string;
