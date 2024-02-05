@@ -8,14 +8,14 @@ import { deletePathRecursively } from '../src/scripts/helpers.js'
 import { eject } from '../src/scripts/eject.js';
 
 const getConfig = () => ({
-  "source": {
+  "get": {
     "path": "test/source",
     "hooks": {
       "before": "mkdir -p ./test/source && cp -r ./test/example ./test/source",
       "after": "mv ./test/source/example/* ./test/source && rm -rf ./test/source/example",
     }
   },
-  "target": {
+  "set": {
     "path": "test/target",
     "includes": [
       "index.js"
@@ -45,7 +45,7 @@ afterEach(async () => {
 
 await test('before source hook is working', async (t) => {
   const localConfig = getConfig();
-  localConfig.source.hooks.after = "";
+  localConfig.get.hooks.after = "";
 
   await get(localConfig);
 
@@ -63,7 +63,7 @@ await test('after source hook is working', async (t) => {
 
 await test('before target hook is working', async (t) => {
   const localConfig = getConfig();
-  localConfig.target.path = "";
+  localConfig.set.path = "";
 
   await set(localConfig);
 
@@ -72,8 +72,8 @@ await test('before target hook is working', async (t) => {
 
 await test('after target hook is working', async (t) => {
   const localConfig = getConfig();
-  localConfig.target.path = "";
-  localConfig.target.hooks.after = "rm -rf ./test/target";
+  localConfig.set.path = "";
+  localConfig.set.hooks.after = "rm -rf ./test/target";
 
   await set(localConfig);
 
@@ -86,7 +86,7 @@ await test('files with default head are removed', async (t) => {
   await fs.writeFileSync('./test/target/with-head.js', defaults.head + 'console.log("Hello World");', 'utf8');
 
   const localConfig = getConfig();
-  localConfig.target.head = defaults.head;
+  localConfig.set.head = defaults.head;
 
   await removeVendors(localConfig);
 
@@ -99,7 +99,7 @@ await test('files with default head and empty folders are removed recursively', 
   await fs.writeFileSync('./test/target/sub/with-head.js', defaults.head + 'console.log("Hello World");', 'utf8');
 
   const localConfig = getConfig();
-  localConfig.target.head = defaults.head;
+  localConfig.set.head = defaults.head;
 
   await removeVendors(localConfig);
 
@@ -115,8 +115,8 @@ await test('included file is copied', async (t) => {
 
 await test('included glob is copied', async (t) => {
   const localConfig = getConfig();
-  localConfig.target.includes = ['index.*'];
-  localConfig.target.excludeDependencies = true;
+  localConfig.set.includes = ['index.*'];
+  localConfig.set.excludeDependencies = true;
 
   await get(localConfig);
   await set(localConfig);
@@ -128,8 +128,8 @@ await test('included glob is copied', async (t) => {
 
 await test('included glob is copied without dependencies', async (t) => {
   const localConfig = getConfig();
-  localConfig.target.includes = ['*.js'];
-  localConfig.target.excludeDependencies = true;
+  localConfig.set.includes = ['*.js'];
+  localConfig.set.excludeDependencies = true;
 
   await get(localConfig);
   await set(localConfig);
@@ -141,7 +141,7 @@ await test('included glob is copied without dependencies', async (t) => {
 
 await test('included file is copied with custom head', async (t) => {
   const localConfig = getConfig();
-  localConfig.target.head = '/* Custom Head */\n';
+  localConfig.set.head = '/* Custom Head */\n';
 
   await get(localConfig);
   await set(localConfig);
@@ -149,7 +149,7 @@ await test('included file is copied with custom head', async (t) => {
   assert(await checkIfFileExists('./test/target/index.js'));
 
   const content = fs.readFileSync('./test/target/index.js', 'utf8');
-  assert(await content.startsWith(localConfig.target.head));
+  assert(await content.startsWith(localConfig.set.head));
 });
 
 await test('included file is copied with default head', async (t) => {
@@ -208,7 +208,7 @@ await test('dependencies of included file are not copied when excluded', async (
   await get(getConfig());
 
   const localConfig = getConfig();
-  localConfig.target.excludeDependencies = true;
+  localConfig.set.excludeDependencies = true;
   await set(localConfig);
 
   assert(!await checkIfFileExists('./test/target/dependency.js'));
@@ -231,7 +231,7 @@ await test('ejecting removes head from files', async (t) => {
 await test('content transforms are applied', async (t) => {
   const localConfig = getConfig();
 
-  localConfig.target.transforms = [
+  localConfig.set.transforms = [
     (path, content) => {
       return { path, content: content.replace('Hello', 'Goodbye') };
     },
@@ -256,7 +256,7 @@ await test('content transforms are applied', async (t) => {
 await test('file path transforms are applied', async (t) => {
   const localConfig = getConfig();
 
-  localConfig.target.transforms = [
+  localConfig.set.transforms = [
     (path, content) => {
       return { path: path.replaceAll('dependency.js', 'transformed-dependency.js'), content: content.replaceAll('./dependency', './transformed-dependency') };
     }

@@ -6,8 +6,8 @@ import { defaults } from './set.js';
  * 
  * @async
  * @param {Object} config - The configuration object.
- * @param {Object} config.target - The target configuration.
- * @param {string} [config.target.head] - The head content that should be removed from the target file. Uses a default if not provided.
+ * @param {Object} config.set - The target configuration.
+ * @param {string} [config.set.head] - The head content that should be removed from the target file. Uses a default if not provided.
  * @param {string} file - The path to the file that should be ejected.
  * 
  * @returns {Promise<void>}
@@ -15,10 +15,10 @@ import { defaults } from './set.js';
  * @throws {Error} Throws an error if the function fails to eject the file.
  */
 export const eject = async (config, file) => {
-  if (!config.target.head) {
-    config.target.head = defaults.head;
+  if (!config.set.head) {
+    config.set.head = defaults.head;
   }
 
   const fileContent = fs.readFileSync(file, 'utf8');
-  fs.writeFileSync(file, fileContent.replace(config.target.head, ''));
+  fs.writeFileSync(file, fileContent.replace(config.set.head, ''));
 }

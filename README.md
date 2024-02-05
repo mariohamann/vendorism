@@ -11,7 +11,7 @@ This function is responsible for setting up the source based on a given configur
 #### Parameters:
 
 -   `config`: The configuration object.
-    -   `source`: The source configuration.
+    -   `get`: The source configuration.
         -   `url` (optional): The URL from which files should be downloaded.
         -   `path`: The directory to which files should be extracted.
         -   `hooks` (optional): Hooks to run before and after the main process.
@@ -22,7 +22,7 @@ This function is responsible for setting up the source based on a given configur
 
 ```javascript
 await get({
-	source: {
+	get: {
 		url: "https://example.com/source.zip",
 		path: "./path/to/extract",
 		hooks: {
@@ -40,7 +40,7 @@ This function sets up the target based on the provided configuration.
 #### Parameters:
 
 -   `config`: The configuration object.
-    -   `target`: The target configuration.
+    -   `set`: The target configuration.
         -   `path`: The path for the target.
         -   `head` (optional): The header content to prepend to target files. Uses a default if not provided.
         -   `hooks` (optional): Hooks to be executed before and after target processing.
@@ -52,7 +52,7 @@ This function sets up the target based on the provided configuration.
 
 ```javascript
 await set({
-	target: {
+	set: {
 		path: "./path/to/target",
 		head: "/* Custom Header */",
 		hooks: {
@@ -85,7 +85,7 @@ Using `transforms`, you can modify file content:
 
 ```javascript
 const localConfig = {
-	target: {
+	set: {
 		// ... other config options
 		transforms: [
 			(path, content) => {
@@ -105,7 +105,7 @@ Similarly, you can also modify file paths:
 
 ```javascript
 const localConfig = {
-	target: {
+	set: {
 		// ... other config options
 		transforms: [
 			(path, content) => {
@@ -141,7 +141,7 @@ This function allows you to eject a file from being managed by the system. Eject
 ```javascript
 await eject(
 	{
-		target: {
+		set: {
 			head: "/* Custom Header */",
 		},
 	},

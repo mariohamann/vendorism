@@ -6,7 +6,7 @@ import dependencyTree from 'dependency-tree';
 import { optimizePathForWindows } from './helpers.js';
 
 /**
- * Default values for the target configuration.
+ * Default values for the set configuration.
  * 
  * @type {Object}
  * 
@@ -28,7 +28,7 @@ export const defaults = {
  * @async
  * @param {Array.<string>} includedFiles - The list of included files for which dependencies should be retrieved.
  * @param {Object} config - The configuration object.
- * @param {Object} config.source - The source configuration containing the path.
+ * @param {Object} config.get - The source configuration containing the path.
  * 
  * @returns {Promise<Array.<string>>} A promise that resolves with a list of dependencies.
  * 
@@ -39,15 +39,15 @@ async function getDependenciesForIncludedFiles(includedFiles, config) {
 
   for (const file of includedFiles) {
     const list = await dependencyTree.toList({
-      filename: path.join(config.source.path, file),
-      directory: config.source.path,
+      filename: path.join(config.get.path, file),
+      directory: config.get.path,
       filter: path => path.indexOf('node_modules') === -1,
       noTypeDefinitions: true
     });
 
     list.forEach(dep => {
       // Convert the absolute path to a relative one
-      const relativePath = optimizePathForWindows(path.relative(config.source.path, dep).replace('../', ''));
+      const relativePath = optimizePathForWindows(path.relative(config.get.path, dep).replace('../', ''));
       allDeps.add(relativePath);
     });
   }
@@ -66,30 +66,30 @@ async function getDependenciesForIncludedFiles(includedFiles, config) {
  * 
  * @async
  * @param {Object} config - The configuration object.
- * @param {Object} config.target - The target configuration.
- * @param {string} config.target.path - The path for the target.
- * @param {string} config.target.head - The head content to match for removal.
- * @param {Object} [config.target.removeVendors] - Configuration for removing vendors.
- * @param {Object} [config.target.removeVendors.globby] - Globby configuration for file pattern matching.
+ * @param {Object} config.set - The target configuration.
+ * @param {string} config.set.path - The path for the target.
+ * @param {string} config.set.head - The head content to match for removal.
+ * @param {Object} [config.set.removeVendors] - Configuration for removing vendors.
+ * @param {Object} [config.set.removeVendors.globby] - Globby configuration for file pattern matching.
  * 
  * @returns {Promise<Array.<string>>} A promise that resolves with a list of overridden paths.
  * 
  * @throws {Error} Throws an error if any step in the function fails.
  */
 export async function removeVendors(config) {
-  const files = await globby(`${config.target.path}/**/*`, config.target.removeVendors?.globby || { gitignore: true }); // adjust the pattern as needed
+  const files = await globby(`${config.set.path}/**/*`, config.set.removeVendors?.globby || { gitignore: true }); // adjust the pattern as needed
 
   let overriden = [];
   for (const file of files) {
     const content = fs.readFileSync(file, 'utf8');
-    if (content.startsWith(config.target.head)) {
+    if (content.startsWith(config.set.head)) {
       // Remove file
       fs.unlinkSync(file);
       overriden.push(optimizePathForWindows(file));
       let currentDir = path.dirname(file);
 
       // Remove empty directories
-      while (currentDir !== config.target.path) {
+      while (currentDir !== config.set.path) {
         if (fs.readdirSync(currentDir).length === 0) {
           fs.rmdirSync(currentDir);
           currentDir = path.dirname(currentDir);
@@ -114,13 +114,13 @@ export async function removeVendors(config) {
  * 
  * @async
  * @param {Object} config - The configuration object.
- * @param {Object} config.source - The source configuration.
- * @param {Object} config.target - The target configuration.
- * @param {string} config.target.path - The path for the target.
- * @param {Array.<string>} config.target.includes - List of files or globs to include.
- * @param {Array.<function>} [config.target.transforms] - List of transform functions.
- * @param {boolean} [config.target.excludeDependencies=false] - Specifies whether to exclude dependencies.
- * @param {string} [config.target.head] - The head content to prepend to target files.
+ * @param {Object} config.get - The source configuration.
+ * @param {Object} config.set - The target configuration.
+ * @param {string} config.set.path - The path for the target.
+ * @param {Array.<string>} config.set.includes - List of files or globs to include.
+ * @param {Array.<function>} [config.set.transforms] - List of transform functions.
+ * @param {boolean} [config.set.excludeDependencies=false] - Specifies whether to exclude dependencies.
+ * @param {string} [config.set.head] - The head content to prepend to target files.
  * 
  * @returns {Promise<Array.<string>>} A promise that resolves with a list of overridden paths.
  * 
@@ -128,10 +128,10 @@ export async function removeVendors(config) {
  */
 export async function createVendors(config) {
   // Resolve files from the glob patterns in includes
-  const includedFiles = await globby(config.target.includes, { cwd: config.source.path });
+  const includedFiles = await globby(config.set.includes, { cwd: config.get.path });
 
   // If excludeDependencies is false, get the dependencies for each file resolved from the globs.
-  const dependencies = !config.target.excludeDependencies
+  const dependencies = !config.set.excludeDependencies
     ? await getDependenciesForIncludedFiles(includedFiles, config)
     : [];
 
@@ -140,36 +140,36 @@ export async function createVendors(config) {
 
   let overriden = [];
   for (const file of files) {
-    const sourcePath = path.join(config.source.path, file);
-    let targetPath = path.join(config.target.path, file);  // Initialize the variable to store the possibly transformed path
+    const getPath = path.join(config.get.path, file);
+    let setPath = path.join(config.set.path, file);  // Initialize the variable to store the possibly transformed path
 
     // Read source content
-    let content = fs.readFileSync(sourcePath, 'utf8');
+    let content = fs.readFileSync(getPath, 'utf8');
 
     // Apply transforms if they exist
-    if (config.target.transforms && Array.isArray(config.target.transforms)) {
-      for (const transform of config.target.transforms) {
-        const transformed = transform(targetPath, content); // Apply the transform function
+    if (config.set.transforms && Array.isArray(config.set.transforms)) {
+      for (const transform of config.set.transforms) {
+        const transformed = transform(setPath, content); // Apply the transform function
 
         if (transformed && transformed.path && transformed.content) {
           // Update content and path with transformed values
           content = transformed.content;
-          targetPath = transformed.path;
+          setPath = transformed.path;
         }
       }
     }
 
     // Check if target file already exists
-    if (fs.existsSync(targetPath)) {
+    if (fs.existsSync(setPath)) {
       continue; // skip copying
     }
 
-    const contentWithHead = config.target.head + "\n" + content;
+    const contentWithHead = config.set.head + "\n" + content;
 
-    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-    fs.writeFileSync(targetPath, contentWithHead, 'utf8');
+    fs.mkdirSync(path.dirname(setPath), { recursive: true });
+    fs.writeFileSync(setPath, contentWithHead, 'utf8');
 
-    overriden.push(optimizePathForWindows(targetPath));
+    overriden.push(optimizePathForWindows(setPath));
   }
   return overriden;
 }
@@ -188,13 +188,13 @@ export async function createVendors(config) {
  * 
  * @async
  * @param {Object} config - The configuration object.
- * @param {Object} config.target - The target configuration.
- * @param {string} config.target.path - The path for the target.
- * @param {string} [config.target.head] - The head content to prepend to target files. Uses a default if not provided.
- * @param {Object} [config.target.hooks] - Hooks to be executed before and after target processing.
- * @param {string} [config.target.hooks.before] - Command to be executed before target processing.
- * @param {string} [config.target.hooks.after] - Command to be executed after target processing.
- * @param {Function[]} [config.target.transforms] - An array of transform functions that can modify content and file paths. Each function takes in the current path and content and returns an object with potentially modified path and content.
+ * @param {Object} config.set - The target configuration.
+ * @param {string} config.set.path - The path for the target.
+ * @param {string} [config.set.head] - The head content to prepend to target files. Uses a default if not provided.
+ * @param {Object} [config.set.hooks] - Hooks to be executed before and after target processing.
+ * @param {string} [config.set.hooks.before] - Command to be executed before target processing.
+ * @param {string} [config.set.hooks.after] - Command to be executed after target processing.
+ * @param {Function[]} [config.set.transforms] - An array of transform functions that can modify content and file paths. Each function takes in the current path and content and returns an object with potentially modified path and content.
  * 
  * @returns {Promise<{removedFiles: string[], newFiles: string[]}>}
  * 
@@ -202,21 +202,21 @@ export async function createVendors(config) {
  */
 export async function set(config) {
   const output = {};
-  if (config.target.hooks?.before) {
-    await execSync(config.target.hooks.before, { stdio: 'inherit' });
+  if (config.set.hooks?.before) {
+    await execSync(config.set.hooks.before, { stdio: 'inherit' });
   }
 
-  if (!config.target.head) {
-    config.target.head = defaults.head;
+  if (!config.set.head) {
+    config.set.head = defaults.head;
   }
 
-  if (config.target?.path) {
+  if (config.set?.path) {
     output.removedFiles = await removeVendors(config);
     output.newFiles = await createVendors(config);
   }
 
-  if (config.target.hooks?.after) {
-    await execSync(config.target.hooks.after, { stdio: 'inherit' });
+  if (config.set.hooks?.after) {
+    await execSync(config.set.hooks.after, { stdio: 'inherit' });
   }
   return output;
 }
