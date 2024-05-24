@@ -21,7 +21,7 @@ const getConfig = () => ({
       "index.js"
     ],
     "excludeDependencies": false,
-    "lockFilesForVSCode": false,
+    "lockFilesForVsCode": false,
     "hooks": {
       "before": "mkdir -p ./test/target",
       "after": ""
