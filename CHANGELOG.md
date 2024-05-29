@@ -1,4 +1,4 @@
-# 2.0.0
+# 4.0.0
 
 **Breaking Change**: `config.target.head` is changed and therefore has to be updated replaced manually:
 
@@ -20,12 +20,4 @@
  * Removing this comment will prevent it from being managed by it.
  * ---------------------------------------------------------------------
  */
-```
-
-# 1.0.0
-
-Initial Release.
-
-```
-
 ```
