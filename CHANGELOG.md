@@ -1,3 +1,25 @@
+# 5.0.0
+
+Instead of `setSource` and `setTarget` we now use `get` and `set`.
+
+**Before:**
+
+```js
+import { setSource } from "../src/scripts/source.js";
+import { defaults, setTarget, removeVendors } from "../src/scripts/target.js";
+import { deletePathRecursively } from "../src/scripts/helpers.js";
+import { eject } from "../src/scripts/eject.js";
+```
+
+**After:**
+
+```js
+import { get } from "../src/scripts/get.js";
+import { defaults, set, removeVendors } from "../src/scripts/set.js";
+import { deletePathRecursively } from "../src/scripts/helpers.js";
+import { eject } from "../src/scripts/eject.js";
+```
+
 # 4.0.0
 
 **Breaking Change**: `config.target.head` is changed and therefore has to be updated replaced manually:
