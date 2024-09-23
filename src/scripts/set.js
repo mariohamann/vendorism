@@ -91,102 +91,68 @@ export async function removeVendors(config) {
 }
 
 /**
- * Applies file-specific transformations to relevant files in the set path.
+ * Load transforms from a given folder.
  * 
- * @param {string} transformFolder - The folder containing file-specific transform definitions.
- * @param {string} targetPath - The base path where transformations are applied.
+ * @param {string} transformFolder - The folder containing transform definitions.
+ * @returns {Promise<Array>} - A list of loaded transform functions.
  */
-async function applyFileTransforms(transformFolder, targetPath) {
+async function loadTransforms(transformFolder) {
   const transformFiles = await globby(`${transformFolder}/**/*.js`, { gitignore: true });
+  const transforms = [];
 
   for (const file of transformFiles) {
-    const transformation = await import(path.resolve(file).toString());
-
-    const strippedPath = file
-      .split(transformFolder)[1]
-      .slice(0, -3); // remove '.js';
-
-    const relevantFilePath = path.join(targetPath, strippedPath);
-
-    if (fs.existsSync(relevantFilePath)) {
-      let content = fs.readFileSync(relevantFilePath, 'utf8');
-      content = transformation.transform(content);
-      fs.writeFileSync(relevantFilePath, content);
-    }
+    const transform = await import(path.resolve(file));
+    transforms.push({ transform, path: file });
   }
+
+  return transforms;
 }
 
 /**
- * Applies global transformations to all files in the set path.
+ * Applies all relevant transformations to the given file.
  * 
- * @param {string} globalTransformFolder - The folder containing global transform definitions.
- * @param {string} targetPath - The base path where transformations are applied.
- */
-async function applyGlobalTransforms(globalTransformFolder, targetPath) {
-  const transforms = await globby(`${globalTransformFolder}/**/*.js`, { gitignore: true });
-
-  for (const file of transforms) {
-    const transformation = await import(path.resolve(file).toString());
-
-    const allTargetFiles = await globby(`${targetPath}/**/*`, { gitignore: true });
-
-    for (const targetFile of allTargetFiles) {
-      let content = fs.readFileSync(targetFile, 'utf8');
-      content = transformation.transform(content);
-      fs.writeFileSync(targetFile, content);
-    }
-  }
-}
-
-/**
- * Creates vendors based on the provided configuration.
- * 
- * @async
+ * @param {string} filePath - The path to the file being transformed.
+ * @param {string} content - The content of the file.
  * @param {Object} config - The configuration object.
- * @param {Object} config.get - The source configuration.
- * @param {Object} config.set - The target configuration.
+ * @param {Array} globalTransforms - List of global transform functions.
+ * @param {Array} fileSpecificTransforms - List of file-specific transform functions.
  * 
- * @returns {Promise<Array.<string>>} A promise that resolves with a list of transformed paths.
+ * @returns {Promise<Object>} - Promise containing the transformed content and new path (if transformed).
  */
-export async function createVendors(config) {
-  const includedFiles = await globby(config.set.includes, { cwd: config.get.path });
-  const dependencies = !config.set.excludeDependencies
-    ? await getDependenciesForIncludedFiles(includedFiles, config)
-    : [];
+async function applyAllTransforms(filePath, content, config, globalTransforms, fileSpecificTransforms) {
+  let transformedPath = filePath;
 
-  const files = [...new Set([...includedFiles, ...dependencies])];
+  // Apply global transforms
+  for (const { transform } of globalTransforms) {
+    const result = transform.transform(content, filePath);
+    if (result) {
+      content = result.content;
+      transformedPath = result.path || transformedPath;
+    };
+  }
 
-  let transformed = [];
-  for (const file of files) {
-    const getPath = path.join(config.get.path, file);
-    let setPath = path.join(config.set.path, file);
+  // Apply file-specific transforms
+  for (const { transform, path: transformPath } of fileSpecificTransforms) {
+    const strippedPath = transformPath.split(config.set.fileTransformFolder)[1].slice(0, -3); // remove '.js'
+    const relevantFilePath = path.join(config.set.path, strippedPath);
 
-    let content = fs.readFileSync(getPath, 'utf8');
+    if (relevantFilePath === transformedPath) {
+      content = transform.transform(content);
+    }
+  }
 
-    // Apply any transformations from the array first
-    if (config.set.transforms && Array.isArray(config.set.transforms)) {
-      for (const transform of config.set.transforms) {
-        const transformedFile = transform(setPath, content);
-
-        if (transformedFile && transformedFile.path && transformedFile.content) {
-          content = transformedFile.content;
-          setPath = transformedFile.path;
-        }
+  // Apply inline transforms defined in config.set.transforms
+  if (config.set.transforms && Array.isArray(config.set.transforms)) {
+    for (const inlineTransform of config.set.transforms) {
+      const result = inlineTransform(transformedPath, content);
+      if (result) {
+        content = result.content;
+        transformedPath = result.path || transformedPath;
       }
     }
-
-    if (fs.existsSync(setPath)) {
-      continue;
-    }
-
-    const contentWithHead = config.set.head + "\n" + content;
-
-    fs.mkdirSync(path.dirname(setPath), { recursive: true });
-    fs.writeFileSync(setPath, contentWithHead, 'utf8');
-
-    transformed.push(optimizePathForWindows(setPath));
   }
-  return transformed;
+
+  return { content, path: transformedPath };
 }
 
 /**
@@ -199,29 +165,65 @@ export async function createVendors(config) {
  */
 export async function set(config) {
   const output = {};
+
+  // Run before hook if available
   if (config.set.hooks?.before) {
     await execSync(config.set.hooks.before, { stdio: 'inherit' });
   }
 
+  // Use default head if not provided
   if (!config.set.head) {
     config.set.head = defaults.head;
   }
 
   if (config.set?.path) {
+    // Remove vendors
     output.removedFiles = await removeVendors(config);
-    output.newFiles = await createVendors(config);
 
-    // Apply global transforms
-    if (config.set.globalTransformFolder) {
-      await applyGlobalTransforms(config.set.globalTransformFolder, config.set.path);
+    // Get all relevant files and dependencies
+    const includedFiles = await globby(config.set.includes, { cwd: config.get.path });
+    const dependencies = !config.set.excludeDependencies
+      ? await getDependenciesForIncludedFiles(includedFiles, config)
+      : [];
+    const files = [...new Set([...includedFiles, ...dependencies])];
+
+    // Load global and file-specific transforms once
+    const globalTransforms = config.set.globalTransformFolder
+      ? await loadTransforms(config.set.globalTransformFolder)
+      : [];
+    const fileSpecificTransforms = config.set.fileTransformFolder
+      ? await loadTransforms(config.set.fileTransformFolder)
+      : [];
+
+    let transformed = [];
+    for (const file of files) {
+      const getPath = path.join(config.get.path, file);
+      const setPath = path.join(config.set.path, file);
+
+      let content = fs.readFileSync(getPath, 'utf8');
+
+      // Apply all relevant transforms (global, file-specific, inline)
+      const { content: transformedContent, path: transformedPath } = await applyAllTransforms(
+        setPath,
+        content,
+        config,
+        globalTransforms,
+        fileSpecificTransforms
+      );
+
+      // Write content only once and handle path changes if needed
+      if (!fs.existsSync(transformedPath)) {
+        const contentWithHead = config.set.head + "\n" + transformedContent;
+        fs.mkdirSync(path.dirname(transformedPath), { recursive: true });
+        fs.writeFileSync(transformedPath, contentWithHead, 'utf8');
+        transformed.push(optimizePathForWindows(transformedPath));
+      }
     }
 
-    // Apply file-specific transforms
-    if (config.set.fileTransformFolder) {
-      await applyFileTransforms(config.set.fileTransformFolder, config.set.path);
-    }
+    output.newFiles = transformed;
   }
 
+  // Run after hook if available
   if (config.set.hooks?.after) {
     await execSync(config.set.hooks.after, { stdio: 'inherit' });
   }
