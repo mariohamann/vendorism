@@ -1,30 +1,22 @@
-import { expect, test, afterEach } from 'vitest';
+import { test, afterEach, beforeEach } from 'vitest';
 import assert from 'node:assert';
 import fs from 'fs';
 import path from 'path';
 import { get } from '../src/scripts/get.js';
-import { defaults, set, removeVendors, watchGlobalOverrides, watchOverrides } from '../src/scripts/set.js';
+import { defaults, set, removeVendors } from '../src/scripts/set.js';
 import { deletePathRecursively } from '../src/scripts/helpers.js'
 import { eject } from '../src/scripts/eject.js';
 
 const getConfig = () => ({
   "get": {
     "path": "test/source",
-    "hooks": {
-      "before": "mkdir -p ./test/source && cp -r ./test/example/source ./test/source && mkdir -p ./test/transforms && cp -r ./test/example/transforms ./test/transforms",
-      "after": "mv ./test/source/source/* ./test/source && rm -rf ./test/source/source && mv ./test/transforms/transforms/* ./test/transforms && rm -rf ./test/transforms/transforms",
-    }
   },
   "set": {
     "path": "test/target",
     "includes": [
       "index.js"
     ],
-    "excludeDependencies": false,
-    "hooks": {
-      "before": "mkdir -p ./test/target",
-      "after": ""
-    }
+    "excludeDependencies": false
   }
 });
 
@@ -38,6 +30,12 @@ function checkIfDirExists(dirpath) {
   return fs.existsSync(fullpath) && fs.lstatSync(fullpath).isDirectory();
 }
 
+beforeEach(async () => {
+  fs.mkdirSync('./test/target', { recursive: true });
+  fs.cpSync('./test/example/source', './test/source', { recursive: true });
+  fs.cpSync('./test/example/transforms', './test/transforms', { recursive: true });
+});
+
 afterEach(async () => {
   deletePathRecursively('./test/source');
   deletePathRecursively('./test/target');
@@ -46,39 +44,38 @@ afterEach(async () => {
 
 await test('before source hook is working', async (t) => {
   const localConfig = getConfig();
-  localConfig.get.hooks.after = "";
+  localConfig.get['hooks'] = { before: "echo 'Hello World' > ./test/source/before.txt" };
 
   await get(localConfig);
 
-  assert(await checkIfDirExists('./test/source'));
-  assert(await checkIfFileExists('./test/source/source/index.js'));
+  assert(await checkIfFileExists('./test/source/before.txt'));
 });
 
 await test('after source hook is working', async (t) => {
-  await get(getConfig());
-  assert(!await checkIfDirExists('./test/source/example'));
-  assert(await checkIfDirExists('./test/source'));
-  assert(await checkIfFileExists('./test/source/index.js'));
-  assert(!await checkIfFileExists('./test/source/example/index.js'));
+  const localConfig = getConfig();
+  localConfig.get['hooks'] = { after: "echo 'Hello World' > ./test/source/after.txt" };
+
+  await get(localConfig);
+
+  assert(await checkIfFileExists('./test/source/after.txt'));
 });
 
 await test('before target hook is working', async (t) => {
   const localConfig = getConfig();
-  localConfig.set.path = "";
+  localConfig.set['hooks'] = { before: "echo 'Hello World' > ./test/target/before.txt" };
 
   await set(localConfig);
 
-  assert(await checkIfDirExists('./test/target'));
+  assert(await checkIfFileExists('./test/target/before.txt'));
 });
 
 await test('after target hook is working', async (t) => {
   const localConfig = getConfig();
-  localConfig.set.path = "";
-  localConfig.set.hooks.after = "rm -rf ./test/target";
+  localConfig.set['hooks'] = { after: "echo 'Hello World' > ./test/target/after.txt" };
 
   await set(localConfig);
 
-  assert(!await checkIfDirExists('./test/target'));
+  assert(await checkIfFileExists('./test/target/after.txt'));
 });
 
 await test('files with default head are removed', async (t) => {
