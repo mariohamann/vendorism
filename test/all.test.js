@@ -3,7 +3,7 @@ import assert from 'node:assert';
 import fs from 'fs';
 import path from 'path';
 import { get } from '../src/scripts/get.js';
-import { defaults, set, removeVendors } from '../src/scripts/set.js';
+import { defaults, set, removeVendors, watchGlobalOverrides, watchOverrides } from '../src/scripts/set.js';
 import { deletePathRecursively } from '../src/scripts/helpers.js'
 import { eject } from '../src/scripts/eject.js';
 
@@ -11,8 +11,8 @@ const getConfig = () => ({
   "get": {
     "path": "test/source",
     "hooks": {
-      "before": "mkdir -p ./test/source && cp -r ./test/example ./test/source",
-      "after": "mv ./test/source/example/* ./test/source && rm -rf ./test/source/example",
+      "before": "mkdir -p ./test/source && cp -r ./test/example/source ./test/source && mkdir -p ./test/transforms && cp -r ./test/example/transforms ./test/transforms",
+      "after": "mv ./test/source/source/* ./test/source && rm -rf ./test/source/source && mv ./test/transforms/transforms/* ./test/transforms && rm -rf ./test/transforms/transforms",
     }
   },
   "set": {
@@ -41,6 +41,7 @@ function checkIfDirExists(dirpath) {
 afterEach(async () => {
   deletePathRecursively('./test/source');
   deletePathRecursively('./test/target');
+  deletePathRecursively('./test/transforms');
 })
 
 await test('before source hook is working', async (t) => {
@@ -49,8 +50,8 @@ await test('before source hook is working', async (t) => {
 
   await get(localConfig);
 
-  assert(await checkIfDirExists('./test/source/example'));
-  assert(await checkIfFileExists('./test/source/example/index.js'));
+  assert(await checkIfDirExists('./test/source'));
+  assert(await checkIfFileExists('./test/source/source/index.js'));
 });
 
 await test('after source hook is working', async (t) => {
@@ -163,7 +164,7 @@ await test('included file is copied with default head', async (t) => {
   assert(await content.startsWith(defaults.head));
 });
 
-await test('only files with head are overriden', async (t) => {
+await test('only files with head are transformed', async (t) => {
   await get(getConfig());
   await fs.mkdirSync('./test/target', { recursive: true });
   await fs.writeFileSync('./test/target/index.js', 'console.log("Hello World");', 'utf8');
@@ -287,4 +288,36 @@ await test('file path transforms are applied', async (t) => {
   const content = fs.readFileSync('./test/target/index.js', 'utf8');
 
   assert(await content.includes('./transformed-dependency'));
+});
+
+await test('global transforms are applied to all files', async (t) => {
+  const localConfig = getConfig();
+  localConfig.set.globalTransformFolder = './test/transforms/global';
+
+  await get(localConfig);
+  await set(localConfig);
+
+  assert(await checkIfFileExists('./test/target/index.js'));
+  assert(await checkIfFileExists('./test/target/dependency.js'));
+
+  const index = fs.readFileSync('./test/target/index.js', 'utf8');
+  const dependency = fs.readFileSync('./test/target/dependency.js', 'utf8');
+
+  assert(await index.includes('transformedDependency'));
+  assert(await index.includes('./dependency'));
+  assert(await dependency.includes('transformedDependency'));
+});
+
+await test('single transforms are applied to specific files', async (t) => {
+  const localConfig = getConfig();
+  localConfig.set.fileTransformFolder = './test/transforms/single';
+
+  await get(localConfig);
+  await set(localConfig);
+
+  assert(await checkIfFileExists('./test/target/dependency.js'));
+
+  const content = fs.readFileSync('./test/target/dependency.js', 'utf8');
+
+  assert(await content.includes('Hi World'));
 });

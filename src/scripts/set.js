@@ -26,20 +26,12 @@ export const defaults = {
 /**
  * Retrieves the dependencies of the specified included files based on the provided configuration.
  * 
- * This function performs the following steps:
- * - Iterates through the specified included files.
- * - Lists the dependencies of each file using `dependencyTree`.
- * - Filters out dependencies located within the node_modules directory.
- * - Converts the absolute path of each dependency to a relative one.
- * 
  * @async
  * @param {Array.<string>} includedFiles - The list of included files for which dependencies should be retrieved.
  * @param {Object} config - The configuration object.
  * @param {Object} config.get - The source configuration containing the path.
  * 
  * @returns {Promise<Array.<string>>} A promise that resolves with a list of dependencies.
- * 
- * @throws {Error} Throws an error if any step in the function fails.
  */
 async function getDependenciesForIncludedFiles(includedFiles, config) {
   let allDeps = new Set();
@@ -53,7 +45,6 @@ async function getDependenciesForIncludedFiles(includedFiles, config) {
     });
 
     list.forEach(dep => {
-      // Convert the absolute path to a relative one
       const relativePath = optimizePathForWindows(path.relative(config.get.path, dep).replace('../', ''));
       allDeps.add(relativePath);
     });
@@ -65,37 +56,26 @@ async function getDependenciesForIncludedFiles(includedFiles, config) {
 /**
  * Removes vendor files based on the provided configuration.
  * 
- * This function performs the following steps:
- * - Retrieves files from the target path.
- * - Checks if the file content starts with the specified head.
- * - Removes files that have the specified head.
- * - Removes empty directories recursively.
- * 
  * @async
  * @param {Object} config - The configuration object.
  * @param {Object} config.set - The target configuration.
  * @param {string} config.set.path - The path for the target.
  * @param {string} [config.set.head] - The head content to match for removal.
  * @param {Object} [config.set.removeVendors] - Configuration for removing vendors.
- * @param {Object} [config.set.removeVendors.globby] - Globby configuration for file pattern matching.
  * 
- * @returns {Promise<Array.<string>>} A promise that resolves with a list of overridden paths.
- * 
- * @throws {Error} Throws an error if any step in the function fails.
+ * @returns {Promise<Array.<string>>} A promise that resolves with a list of removed paths.
  */
 export async function removeVendors(config) {
-  const files = await globby(`${config.set.path}/**/*`, config.set.removeVendors?.globby || { gitignore: true }); // adjust the pattern as needed
+  const files = await globby(`${config.set.path}/**/*`, config.set.removeVendors?.globby || { gitignore: true });
 
-  let overriden = [];
+  let removed = [];
   for (const file of files) {
     const content = fs.readFileSync(file, 'utf8');
     if (content.startsWith(config.set.head)) {
-      // Remove file
       fs.unlinkSync(file);
-      overriden.push(optimizePathForWindows(file));
+      removed.push(optimizePathForWindows(file));
       let currentDir = path.dirname(file);
 
-      // Remove empty directories
       while (currentDir !== config.set.path) {
         if (fs.readdirSync(currentDir).length === 0) {
           fs.rmdirSync(currentDir);
@@ -107,68 +87,96 @@ export async function removeVendors(config) {
     }
   }
 
-  return overriden;
+  return removed;
 }
+
+/**
+ * Applies file-specific transformations to relevant files in the set path.
+ * 
+ * @param {string} transformFolder - The folder containing file-specific transform definitions.
+ * @param {string} targetPath - The base path where transformations are applied.
+ */
+async function applyFileTransforms(transformFolder, targetPath) {
+  const transformFiles = await globby(`${transformFolder}/**/*.js`, { gitignore: true });
+
+  for (const file of transformFiles) {
+    const transformation = await import(path.resolve(file).toString());
+
+    const strippedPath = file
+      .split(transformFolder)[1]
+      .slice(0, -3); // remove '.js';
+
+    const relevantFilePath = path.join(targetPath, strippedPath);
+
+    if (fs.existsSync(relevantFilePath)) {
+      let content = fs.readFileSync(relevantFilePath, 'utf8');
+      content = transformation.transform(content);
+      fs.writeFileSync(relevantFilePath, content);
+    }
+  }
+}
+
+/**
+ * Applies global transformations to all files in the set path.
+ * 
+ * @param {string} globalTransformFolder - The folder containing global transform definitions.
+ * @param {string} targetPath - The base path where transformations are applied.
+ */
+async function applyGlobalTransforms(globalTransformFolder, targetPath) {
+  const transforms = await globby(`${globalTransformFolder}/**/*.js`, { gitignore: true });
+
+  for (const file of transforms) {
+    const transformation = await import(path.resolve(file).toString());
+
+    const allTargetFiles = await globby(`${targetPath}/**/*`, { gitignore: true });
+
+    for (const targetFile of allTargetFiles) {
+      let content = fs.readFileSync(targetFile, 'utf8');
+      content = transformation.transform(content);
+      fs.writeFileSync(targetFile, content);
+    }
+  }
+}
+
 /**
  * Creates vendors based on the provided configuration.
- * 
- * This function performs the following steps:
- * - Retrieves dependencies or includes files based on the excludeDependencies configuration.
- * - Reads content from the source path.
- * - Applies transforms to content and target path if they exist.
- * - Skips copying if target file already exists.
- * - Writes the file to the target path with the appropriate head.
  * 
  * @async
  * @param {Object} config - The configuration object.
  * @param {Object} config.get - The source configuration.
  * @param {Object} config.set - The target configuration.
- * @param {string} config.set.path - The path for the target.
- * @param {Array.<string>} config.set.includes - List of files or globs to include.
- * @param {Array.<function>} [config.set.transforms] - List of transform functions.
- * @param {boolean} [config.set.excludeDependencies=false] - Specifies whether to exclude dependencies.
- * @param {string} [config.set.head] - The head content to prepend to target files.
  * 
- * @returns {Promise<Array.<string>>} A promise that resolves with a list of overridden paths.
- * 
- * @throws {Error} Throws an error if any step in the function fails.
+ * @returns {Promise<Array.<string>>} A promise that resolves with a list of transformed paths.
  */
 export async function createVendors(config) {
-  // Resolve files from the glob patterns in includes
   const includedFiles = await globby(config.set.includes, { cwd: config.get.path });
-
-  // If excludeDependencies is false, get the dependencies for each file resolved from the globs.
   const dependencies = !config.set.excludeDependencies
     ? await getDependenciesForIncludedFiles(includedFiles, config)
     : [];
 
-  // Merge included files and their dependencies
   const files = [...new Set([...includedFiles, ...dependencies])];
 
-  let overriden = [];
+  let transformed = [];
   for (const file of files) {
     const getPath = path.join(config.get.path, file);
-    let setPath = path.join(config.set.path, file);  // Initialize the variable to store the possibly transformed path
+    let setPath = path.join(config.set.path, file);
 
-    // Read source content
     let content = fs.readFileSync(getPath, 'utf8');
 
-    // Apply transforms if they exist
+    // Apply any transformations from the array first
     if (config.set.transforms && Array.isArray(config.set.transforms)) {
       for (const transform of config.set.transforms) {
-        const transformed = transform(setPath, content); // Apply the transform function
+        const transformedFile = transform(setPath, content);
 
-        if (transformed && transformed.path && transformed.content) {
-          // Update content and path with transformed values
-          content = transformed.content;
-          setPath = transformed.path;
+        if (transformedFile && transformedFile.path && transformedFile.content) {
+          content = transformedFile.content;
+          setPath = transformedFile.path;
         }
       }
     }
 
-    // Check if target file already exists
     if (fs.existsSync(setPath)) {
-      continue; // skip copying
+      continue;
     }
 
     const contentWithHead = config.set.head + "\n" + content;
@@ -176,36 +184,18 @@ export async function createVendors(config) {
     fs.mkdirSync(path.dirname(setPath), { recursive: true });
     fs.writeFileSync(setPath, contentWithHead, 'utf8');
 
-    overriden.push(optimizePathForWindows(setPath));
+    transformed.push(optimizePathForWindows(setPath));
   }
-  return overriden;
+  return transformed;
 }
 
 /**
  * Sets up the target based on the provided configuration.
  * 
- * This function performs the following steps:
- * 1. Executes the before hook if provided.
- * 2. Assigns a default head to the target if none is provided.
- * 3. If a target path is provided, the function:
- *    - Removes vendors based on the configuration.
- *    - Creates new vendors, with potential path and content transformations.
- *    - If specified in the config, updates VS Code settings for read-only files.
- * 4. Executes the after hook if provided.
- * 
  * @async
  * @param {Object} config - The configuration object.
- * @param {Object} config.set - The target configuration.
- * @param {string} config.set.path - The path for the target.
- * @param {string} [config.set.head] - The head content to prepend to target files. Uses a default if not provided.
- * @param {Object} [config.set.hooks] - Hooks to be executed before and after target processing.
- * @param {string} [config.set.hooks.before] - Command to be executed before target processing.
- * @param {string} [config.set.hooks.after] - Command to be executed after target processing.
- * @param {Function[]} [config.set.transforms] - An array of transform functions that can modify content and file paths. Each function takes in the current path and content and returns an object with potentially modified path and content.
  * 
  * @returns {Promise<{removedFiles: string[], newFiles: string[]}>}
- * 
- * @throws {Error} Throws an error if any step in the function fails.
  */
 export async function set(config) {
   const output = {};
@@ -220,10 +210,21 @@ export async function set(config) {
   if (config.set?.path) {
     output.removedFiles = await removeVendors(config);
     output.newFiles = await createVendors(config);
+
+    // Apply global transforms
+    if (config.set.globalTransformFolder) {
+      await applyGlobalTransforms(config.set.globalTransformFolder, config.set.path);
+    }
+
+    // Apply file-specific transforms
+    if (config.set.fileTransformFolder) {
+      await applyFileTransforms(config.set.fileTransformFolder, config.set.path);
+    }
   }
 
   if (config.set.hooks?.after) {
     await execSync(config.set.hooks.after, { stdio: 'inherit' });
   }
+
   return output;
 }
