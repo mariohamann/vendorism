@@ -3,9 +3,9 @@ import assert from 'node:assert';
 import fs from 'fs';
 import path from 'path';
 import { get } from '../src/scripts/get.js';
-import { defaults, set, removeVendors } from '../src/scripts/set.js';
+import { set, removeVendors } from '../src/scripts/set.js';
 import { deletePathRecursively } from '../src/scripts/helpers.js'
-import { eject } from '../src/scripts/eject.js';
+import { banners, tag as bannerTag, description as bannerDescription } from '../src/scripts/transforms/banner.js';
 
 const getConfig = () => ({
   "get": {
@@ -78,26 +78,24 @@ await test('after target hook is working', async (t) => {
   assert(await checkIfFileExists('./test/target/after.txt'));
 });
 
-await test('files with default head are removed', async (t) => {
+await test('files with default banner are removed', async (t) => {
   await fs.mkdirSync('./test/target', { recursive: true });
-  await fs.writeFileSync('./test/target/without-head.js', 'console.log("Hello World");', 'utf8');
-  await fs.writeFileSync('./test/target/with-head.js', defaults.head + 'console.log("Hello World");', 'utf8');
+  await fs.writeFileSync('./test/target/without-banner.js', 'console.log("Hello World");', 'utf8');
+  await fs.writeFileSync('./test/target/with-banner.js', banners.default + 'console.log("Hello World");', 'utf8');
 
   const localConfig = getConfig();
-  localConfig.set.head = defaults.head;
 
   await removeVendors(localConfig);
 
-  assert(await checkIfFileExists('./test/target/without-head.js'));
-  assert(!await checkIfFileExists('./test/target/with-head.js'));
+  assert(await checkIfFileExists('./test/target/without-banner.js'));
+  assert(!await checkIfFileExists('./test/target/with-banner.js'));
 });
 
-await test('files with default head and empty folders are removed recursively', async (t) => {
+await test('files with default banner and empty folders are removed recursively', async (t) => {
   await fs.mkdirSync('./test/target/sub', { recursive: true });
-  await fs.writeFileSync('./test/target/sub/with-head.js', defaults.head + 'console.log("Hello World");', 'utf8');
+  await fs.writeFileSync('./test/target/sub/with-banner.js', banners.default + 'console.log("Hello World");', 'utf8');
 
   const localConfig = getConfig();
-  localConfig.set.head = defaults.head;
 
   await removeVendors(localConfig);
 
@@ -137,20 +135,7 @@ await test('included glob is copied without dependencies', async (t) => {
 
 });
 
-await test('included file is copied with custom head', async (t) => {
-  const localConfig = getConfig();
-  localConfig.set.head = '/* Custom Head */\n';
-
-  await get(localConfig);
-  await set(localConfig);
-
-  assert(await checkIfFileExists('./test/target/index.js'));
-
-  const content = fs.readFileSync('./test/target/index.js', 'utf8');
-  assert(await content.startsWith(localConfig.set.head));
-});
-
-await test('included file is copied with default head', async (t) => {
+await test('included file is copied with default banner', async (t) => {
   await get(getConfig());
   await set(getConfig());
 
@@ -158,10 +143,10 @@ await test('included file is copied with default head', async (t) => {
 
   const content = fs.readFileSync('./test/target/index.js', 'utf8');
 
-  assert(await content.startsWith(defaults.head));
+  assert(await content.startsWith(banners.default));
 });
 
-await test('only files with head are transformed', async (t) => {
+await test('only files with banner are transformed', async (t) => {
   await get(getConfig());
   await fs.mkdirSync('./test/target', { recursive: true });
   await fs.writeFileSync('./test/target/index.js', 'console.log("Hello World");', 'utf8');
@@ -170,7 +155,7 @@ await test('only files with head are transformed', async (t) => {
 
   const content = fs.readFileSync('./test/target/index.js', 'utf8');
 
-  assert(await !content.startsWith(defaults.head));
+  assert(await !content.includes(bannerTag));
 });
 
 await test('dependencies of included file are copied', async (t) => {
@@ -195,11 +180,11 @@ await test('vendored files are returned as output.newFiles', async (t) => {
 await test('removed files are returned as output.newFiles', async (t) => {
   await get(getConfig());
   await fs.mkdirSync('./test/target', { recursive: true });
-  await fs.writeFileSync('./test/target/with-head.js', defaults.head + 'console.log("Hello World");', 'utf8');
+  await fs.writeFileSync('./test/target/with-banner.js', banners.default + 'console.log("Hello World");', 'utf8');
 
   const target = await set(getConfig());
 
-  assert(await target.removedFiles.includes('test/target/with-head.js'));
+  assert(await target.removedFiles.includes('test/target/with-banner.js'));
 });
 
 await test('dependencies of included file are not copied when excluded', async (t) => {
@@ -212,43 +197,60 @@ await test('dependencies of included file are not copied when excluded', async (
   assert(!await checkIfFileExists('./test/target/dependency.js'));
 });
 
-await test('ejecting removes default head from files', async (t) => {
-  await fs.mkdirSync('./test/target', { recursive: true });
-  await fs.writeFileSync('./test/target/with-head.js', defaults.head + 'console.log("Hello World");', 'utf8');
 
-  let content = fs.readFileSync('./test/target/with-head.js', 'utf8');
-  assert(await content.startsWith(defaults.head));
 
-  eject('./test/target/with-head.js');
+await test('content transforms are applied when only string is returned', async (t) => {
+  const localConfig = getConfig();
 
-  content = fs.readFileSync('./test/target/with-head.js', 'utf8');
-  assert(await checkIfFileExists('./test/target/with-head.js'));
-  assert(await content === 'console.log("Hello World");');
+  localConfig.set.transforms = [
+    (content) => {
+      return content.replace('Hello', 'Goodbye');
+    },
+    (content) => {
+      return content.replace('World', 'Someone');
+    }
+  ];
+
+  await get(localConfig);
+  await set(localConfig);
+
+  assert(await checkIfFileExists('./test/target/index.js'));
+
+  assert(await checkIfFileExists('./test/target/dependency.js'));
+
+  const content = fs.readFileSync('./test/target/dependency.js', 'utf8');
+
+  assert(await content.includes('Goodbye Someone'));
 });
 
-await test('ejecting removes custom head from files', async (t) => {
-  const head = '// CUSTOM HEAD';
-  await fs.mkdirSync('./test/target', { recursive: true });
-  await fs.writeFileSync('./test/target/with-head.js', head + 'console.log("Hello World");', 'utf8');
+await test('do not write original banner if it already exists by custom transform', async (t) => {
+  const localConfig = getConfig();
 
-  let content = fs.readFileSync('./test/target/with-head.js', 'utf8');
-  assert(await content.startsWith(head));
+  localConfig.set.transforms = [
+    (content) => {
+      return `// ${bannerTag}\n\n${content}`;
+    },
+  ];
 
-  eject('./test/target/with-head.js', { set: { head } });
+  await get(localConfig);
+  await set(localConfig);
 
-  content = fs.readFileSync('./test/target/with-head.js', 'utf8');
-  assert(await checkIfFileExists('./test/target/with-head.js'));
-  assert(await content === 'console.log("Hello World");');
+  assert(await checkIfFileExists('./test/target/index.js'));
+
+  const content = fs.readFileSync('./test/target/index.js', 'utf8');
+
+  assert(await content.includes(bannerTag));
+  assert(await !content.includes(bannerDescription));
 });
 
 await test('content transforms are applied', async (t) => {
   const localConfig = getConfig();
 
   localConfig.set.transforms = [
-    (path, content) => {
+    (content, path) => {
       return { path, content: content.replace('Hello', 'Goodbye') };
     },
-    (path, content) => {
+    (content, path) => {
       return { path, content: content.replace('World', 'Someone') };
     }
   ];
@@ -270,7 +272,7 @@ await test('file path transforms are applied', async (t) => {
   const localConfig = getConfig();
 
   localConfig.set.transforms = [
-    (path, content) => {
+    (content, path) => {
       return { path: path.replaceAll('dependency.js', 'transformed-dependency.js'), content: content.replaceAll('./dependency', './transformed-dependency') };
     }
   ];
@@ -317,4 +319,36 @@ await test('single transforms are applied to specific files', async (t) => {
   const content = fs.readFileSync('./test/target/dependency.js', 'utf8');
 
   assert(await content.includes('Hi World'));
+});
+
+await test('banners are set according to their extension', async (t) => {
+  const localConfig = getConfig();
+  localConfig.set.includes = ['extensions/*'];
+
+  await get(localConfig);
+  await set(localConfig);
+
+  assert(await checkIfFileExists('./test/target/extensions/example.js'));
+  assert(await checkIfFileExists('./test/target/extensions/example.unknown'));
+  assert(await checkIfFileExists('./test/target/extensions/example.html'));
+  assert(await checkIfFileExists('./test/target/extensions/example.njk'));
+  assert(await checkIfFileExists('./test/target/extensions/example.hbs'));
+  assert(await checkIfFileExists('./test/target/extensions/example.md'));
+  assert(await checkIfFileExists('./test/target/extensions/example-with-frontmatter.md'));
+
+  const js = fs.readFileSync('./test/target/extensions/example.js', 'utf8');
+  const unknown = fs.readFileSync('./test/target/extensions/example.unknown', 'utf8');
+  const html = fs.readFileSync('./test/target/extensions/example.html', 'utf8');
+  const njk = fs.readFileSync('./test/target/extensions/example.njk', 'utf8');
+  const hbs = fs.readFileSync('./test/target/extensions/example.hbs', 'utf8');
+  const md = fs.readFileSync('./test/target/extensions/example.md', 'utf8');
+  const mdWithFrontmatter = fs.readFileSync('./test/target/extensions/example-with-frontmatter.md', 'utf8');
+
+  assert(await js.startsWith(banners.default));
+  assert(await unknown.startsWith(banners.default));
+  assert(await html.startsWith(banners.html));
+  assert(await njk.startsWith(banners.jinja2));
+  assert(await hbs.startsWith(banners.handlebars));
+  assert(await md.startsWith(banners.html));
+  assert(await mdWithFrontmatter.includes(banners.frontmatter));
 });
