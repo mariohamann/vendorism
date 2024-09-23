@@ -223,26 +223,6 @@ await test('content transforms are applied when only string is returned', async 
   assert(await content.includes('Goodbye Someone'));
 });
 
-await test('do not write original banner if it already exists by custom transform', async (t) => {
-  const localConfig = getConfig();
-
-  localConfig.set.transforms = [
-    (content) => {
-      return `// ${bannerTag}\n\n${content}`;
-    },
-  ];
-
-  await get(localConfig);
-  await set(localConfig);
-
-  assert(await checkIfFileExists('./test/target/index.js'));
-
-  const content = fs.readFileSync('./test/target/index.js', 'utf8');
-
-  assert(await content.includes(bannerTag));
-  assert(await !content.includes(bannerDescription));
-});
-
 await test('content transforms are applied', async (t) => {
   const localConfig = getConfig();
 
@@ -351,4 +331,26 @@ await test('banners are set according to their extension', async (t) => {
   assert(await hbs.startsWith(banners.handlebars));
   assert(await md.startsWith(banners.html));
   assert(await mdWithFrontmatter.includes(banners.frontmatter));
+});
+
+
+
+await test('banner are not set if it already exists by custom transform', async (t) => {
+  const localConfig = getConfig();
+
+  localConfig.set.transforms = [
+    (content) => {
+      return `// ${bannerTag}\n\n${content}`;
+    },
+  ];
+
+  await get(localConfig);
+  await set(localConfig);
+
+  assert(await checkIfFileExists('./test/target/index.js'));
+
+  const content = fs.readFileSync('./test/target/index.js', 'utf8');
+
+  assert(await content.includes(bannerTag));
+  assert(await !content.includes(bannerDescription));
 });
