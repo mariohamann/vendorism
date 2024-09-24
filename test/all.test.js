@@ -333,8 +333,6 @@ await test('banners are set according to their extension', async (t) => {
   assert(await mdWithFrontmatter.includes(banners.frontmatter));
 });
 
-
-
 await test('banner are not set if it already exists by custom transform', async (t) => {
   const localConfig = getConfig();
 
