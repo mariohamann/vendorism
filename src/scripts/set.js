@@ -94,58 +94,64 @@ async function loadTransforms(transformFolder) {
 /**
  * Applies all relevant transformations to the given file.
  * 
- * @param {string} filePath - The path to the file being transformed.
- * @param {string} content - The content of the file.
+ * @param {string} file - The path to the file being transformed.
  * @param {Object} config - The configuration object.
  * @param {Array} globalTransforms - List of global transform functions.
  * @param {Array} fileSpecificTransforms - List of file-specific transform functions.
  * 
- * @returns {Promise<Object>} - Promise containing the transformed content and new path (if transformed).
+ * @returns {Promise<string|undefined>} - A promise that resolves with the path of the transformed file or null if no transformation was applied.
  */
-async function applyAllTransforms(filePath, content, config, globalTransforms, fileSpecificTransforms) {
-  let transformedContent = content;
-  let transformedPath = filePath;
+async function applyAllTransforms(file, config, globalTransforms, fileSpecificTransforms) {
+  let getPath = path.join(config.get.path, file);
+  let transformedPath = path.join(config.set.path, file);
+  let transformedContent = fs.readFileSync(getPath, 'utf8');
 
-  // Apply global transforms
-  for (const { transform } of globalTransforms) {
-    const result = transform.transform(transformedContent, transformedPath);
-    if (typeof result === 'object') {
-      transformedContent = result.content || transformedContent;
-      transformedPath = result.path || transformedPath;
-    }
-    else {
-      transformedContent = result;
-    }
-  }
-
-  // Apply file-specific transforms
-  for (const { transform, path: transformPath } of fileSpecificTransforms) {
-    const strippedPath = transformPath.split(config.set.fileTransformFolder)[1].slice(0, -3); // remove '.js'
-    const relevantFilePath = path.join(config.set.path, strippedPath);
-
-    if (relevantFilePath === transformedPath) {
-      transformedContent = transform.transform(transformedContent);
-    }
-  }
-
-  // Apply inline transforms defined in config.set.transforms
-  if (config.set.transforms && Array.isArray(config.set.transforms)) {
-    for (const inlineTransform of config.set.transforms) {
-      const result = inlineTransform(transformedContent, transformedPath);
+  // Write content once if file is vendorable
+  if (!fs.existsSync(transformedPath)) {
+    // Apply global transforms
+    for (const { transform } of globalTransforms) {
+      const result = transform.transform(transformedContent, transformedPath);
       if (typeof result === 'object') {
         transformedContent = result.content || transformedContent;
         transformedPath = result.path || transformedPath;
       }
       else {
-        transformedContent = result || transformedContent;
+        transformedContent = result;
       }
     }
+
+    // Apply file-specific transforms
+    for (const { transform, path: transformPath } of fileSpecificTransforms) {
+      const strippedPath = transformPath.split(config.set.fileTransformFolder)[1].slice(0, -3); // remove '.js'
+      const relevantFilePath = path.join(config.set.path, strippedPath);
+
+      if (relevantFilePath === transformedPath) {
+        transformedContent = transform.transform(transformedContent);
+      }
+    }
+
+    // Apply inline transforms defined in config.set.transforms
+    if (config.set.transforms && Array.isArray(config.set.transforms)) {
+      for (const inlineTransform of config.set.transforms) {
+        const result = inlineTransform(transformedContent, transformedPath);
+        if (typeof result === 'object') {
+          transformedContent = result.content || transformedContent;
+          transformedPath = result.path || transformedPath;
+        }
+        else {
+          transformedContent = result || transformedContent;
+        }
+      }
+    }
+
+    // Apply banner transform last
+    transformedContent = bannerTransform(transformedContent, transformedPath);
+
+    fs.mkdirSync(path.dirname(transformedPath), { recursive: true });
+    fs.writeFileSync(transformedPath, transformedContent, 'utf8');
+    return transformedPath;
   }
-
-  // Apply banner transform last
-  transformedContent = bannerTransform(transformedContent, transformedPath);
-
-  return { content: transformedContent, path: transformedPath };
+  return;
 }
 
 /**
@@ -157,7 +163,10 @@ async function applyAllTransforms(filePath, content, config, globalTransforms, f
  * @returns {Promise<{removedFiles: string[], newFiles: string[]}>}
  */
 export async function set(config) {
-  const output = {};
+  const output = {
+    removedFiles: /** @type {string[]} */ ([]),
+    newFiles: /** @type {string[]} */ ([])
+  };
 
   // Run before hook if available
   if (config.set.hooks?.before) {
@@ -183,31 +192,17 @@ export async function set(config) {
       ? await loadTransforms(config.set.fileTransformFolder)
       : [];
 
-    let transformed = [];
     for (const file of files) {
-      const getPath = path.join(config.get.path, file);
-      const setPath = path.join(config.set.path, file);
-
-      let content = fs.readFileSync(getPath, 'utf8');
-
-      // Apply all relevant transforms (global, file-specific, inline)
-      const { content: transformedContent, path: transformedPath } = await applyAllTransforms(
-        setPath,
-        content,
+      const transformedPath = await applyAllTransforms(
+        file,
         config,
         globalTransforms,
         fileSpecificTransforms
       );
-
-      // Write content only once and handle path changes if needed
-      if (!fs.existsSync(transformedPath)) {
-        fs.mkdirSync(path.dirname(transformedPath), { recursive: true });
-        fs.writeFileSync(transformedPath, transformedContent, 'utf8');
-        transformed.push(optimizePathForWindows(transformedPath));
+      if (transformedPath) {
+        output.newFiles.push(optimizePathForWindows(transformedPath));
       }
     }
-
-    output.newFiles = transformed;
   }
 
   // Run after hook if available

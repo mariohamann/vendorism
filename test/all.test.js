@@ -91,7 +91,6 @@ await test('after target hook is working', async (t) => {
 /* File removing */
 
 await test('files with default banner are removed', async (t) => {
-  await fs.mkdirSync('./test/target', { recursive: true });
   await fs.writeFileSync('./test/target/without-banner.js', 'console.log("Hello World");', 'utf8');
   await fs.writeFileSync('./test/target/with-banner.js', banners.default + 'console.log("Hello World");', 'utf8');
 
@@ -183,7 +182,6 @@ await test('included file is copied with default banner', async (t) => {
 
 await test('only files with banner are transformed', async (t) => {
   await get(getConfig());
-  await fs.mkdirSync('./test/target', { recursive: true });
   await fs.writeFileSync('./test/target/index.js', 'console.log("Hello World");', 'utf8');
 
   await set(getConfig());
@@ -249,7 +247,15 @@ await test('banner are not set if it already exists by custom transform', async 
 
 await test('vendored files are returned as output.newFiles', async (t) => {
   await get(getConfig());
-  await fs.mkdirSync('./test/target', { recursive: true });
+
+  const target = await set(getConfig());
+
+  assert(await target.newFiles.includes('test/target/index.js'));
+  assert(await target.newFiles.includes('test/target/dependency.js'));
+});
+
+await test('not vendored files are not returned as output.newFiles', async (t) => {
+  await get(getConfig());
   await fs.writeFileSync('./test/target/index.js', 'console.log("Hello World");', 'utf8');
 
   const target = await set(getConfig());
@@ -258,10 +264,8 @@ await test('vendored files are returned as output.newFiles', async (t) => {
   assert(await target.newFiles.includes('test/target/dependency.js'));
 });
 
-
 await test('removed files are returned as output.newFiles', async (t) => {
   await get(getConfig());
-  await fs.mkdirSync('./test/target', { recursive: true });
   await fs.writeFileSync('./test/target/with-banner.js', banners.default + 'console.log("Hello World");', 'utf8');
 
   const target = await set(getConfig());
