@@ -2,8 +2,8 @@ import { test, afterEach, beforeEach } from 'vitest';
 import assert from 'node:assert';
 import fs from 'fs';
 import path from 'path';
-import { get } from '../src/scripts/get.js';
-import { set, setFile, removeVendors } from '../src/scripts/set.js';
+import { get, set, setFile } from '../src/index.js';
+import { removeVendors } from '../src/scripts/set.js';
 import { deletePathRecursively } from '../src/scripts/helpers.js'
 import { banners, tag as bannerTag, description as bannerDescription } from '../src/scripts/transforms/banner.js';
 

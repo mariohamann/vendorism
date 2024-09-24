@@ -1,5 +1,6 @@
 import { download } from '@guoyunhe/downloader';
-import { execSync } from 'child_process';
+import { execSync } from 'child_process';// @ts-ignore
+import('./configTypes.js').Config;
 
 /**
  * Sets the source based on the provided configuration.
@@ -10,14 +11,7 @@ import { execSync } from 'child_process';
  * - Execute the 'after' hook if provided.
  * 
  * @async
- * @param {Object} config - The configuration object.
- * @param {Object} config.get - The source configuration.
- * @param {Object} [config.get.hooks] - Collection of hooks to run before and after the main process.
- * @param {string} [config.get.hooks.before] - A hook command to run before the main process.
- * @param {string} [config.get.hooks.after] - A hook command to run after the main process.
- * @param {string} [config.get.url] - The URL from which files should be downloaded.
- * @param {string} config.get.path - The directory to which files should be extracted.
- * @param {Object} [config.get.downloadConfig] - The configuration object for the download process.
+ * @param {Config} config - The configuration object.
  * 
  * @returns {Promise<void>} A promise indicating completion of the function.
  * 

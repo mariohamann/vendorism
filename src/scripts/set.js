@@ -5,15 +5,15 @@ import { execSync } from 'child_process';
 import dependencyTree from 'dependency-tree';
 import { optimizePathForWindows } from './helpers.js';
 import { tag as bannerTag, transform as bannerTransform } from './transforms/banner.js';
+// @ts-ignore
+import('./configTypes.js').Config;
 
 /**
  * Retrieves the dependencies of the specified included files based on the provided configuration.
  * 
  * @async
  * @param {Array.<string>} includedFiles - The list of included files for which dependencies should be retrieved.
- * @param {Object} config - The configuration object.
- * @param {Object} config.get - The source configuration containing the path.
- * 
+ * @param {Config} config - The configuration object.
  * @returns {Promise<Array.<string>>} A promise that resolves with a list of dependencies.
  */
 async function getDependenciesForIncludedFiles(includedFiles, config) {
@@ -23,7 +23,7 @@ async function getDependenciesForIncludedFiles(includedFiles, config) {
     const list = await dependencyTree.toList({
       filename: path.join(config.get.path, file),
       directory: config.get.path,
-      filter: path => path.indexOf('node_modules') === -1,
+      filter: (path) => path.indexOf('node_modules') === -1,
       noTypeDefinitions: true
     });
 
@@ -40,12 +40,7 @@ async function getDependenciesForIncludedFiles(includedFiles, config) {
  * Removes vendor files based on the provided configuration.
  * 
  * @async
- * @param {Object} config - The configuration object.
- * @param {Object} config.set - The target configuration.
- * @param {string} config.set.path - The path for the target.
- * @param {string} [config.set.head] - The head content to match for removal.
- * @param {Object} [config.set.removeVendors] - Configuration for removing vendors.
- * 
+ * @param {Config} config - The configuration object.
  * @returns {Promise<Array.<string>>} A promise that resolves with a list of removed paths.
  */
 export async function removeVendors(config) {
@@ -74,10 +69,10 @@ export async function removeVendors(config) {
 }
 
 /**
- * Load transforms from a given folder.
+ * Loads transforms from a given folder.
  * 
  * @param {string} transformFolder - The folder containing transform definitions.
- * @returns {Promise<Array>} - A list of loaded transform functions.
+ * @returns {Promise<Array>} A promise that resolves with a list of loaded transform functions.
  */
 async function loadTransforms(transformFolder) {
   const transformFiles = await globby(`${transformFolder}/**/*.js`, { gitignore: true });
@@ -94,19 +89,19 @@ async function loadTransforms(transformFolder) {
 /**
  * Applies all relevant transformations to the given file.
  * 
+ * @async
  * @param {string} file - The path to the file being transformed.
- * @param {Object} config - The configuration object.
+ * @param {Config} config - The configuration object.
  * @param {Array} globalTransforms - List of global transform functions.
  * @param {Array} fileSpecificTransforms - List of file-specific transform functions.
- * 
- * @returns {Promise<string|undefined>} - A promise that resolves with the path of the transformed file or null if no transformation was applied.
+ * @returns {Promise<string|undefined>} A promise that resolves with the path of the transformed file or undefined if no transformation was applied.
  */
 async function applyAllTransforms(file, config, globalTransforms, fileSpecificTransforms) {
   let getPath = path.join(config.get.path, file);
   let transformedPath = path.join(config.set.path, file);
   let transformedContent = fs.readFileSync(getPath, 'utf8');
 
-  // Write content once if file is vendorable
+  // Write content once if the file is vendorable
   if (!fs.existsSync(transformedPath)) {
     // Apply global transforms
     for (const { transform } of globalTransforms) {
@@ -114,8 +109,7 @@ async function applyAllTransforms(file, config, globalTransforms, fileSpecificTr
       if (typeof result === 'object') {
         transformedContent = result.content || transformedContent;
         transformedPath = result.path || transformedPath;
-      }
-      else {
+      } else {
         transformedContent = result;
       }
     }
@@ -137,8 +131,7 @@ async function applyAllTransforms(file, config, globalTransforms, fileSpecificTr
         if (typeof result === 'object') {
           transformedContent = result.content || transformedContent;
           transformedPath = result.path || transformedPath;
-        }
-        else {
+        } else {
           transformedContent = result || transformedContent;
         }
       }
@@ -158,14 +151,13 @@ async function applyAllTransforms(file, config, globalTransforms, fileSpecificTr
  * Sets up the target based on the provided configuration.
  * 
  * @async
- * @param {Object} config - The configuration object.
- * 
- * @returns {Promise<{removedFiles: string[], newFiles: string[]}>}
+ * @param {Config} config - The configuration object.
+ * @returns {Promise<{removedFiles: string[], newFiles: string[]}>} A promise that resolves with a list of removed and new files.
  */
 export async function set(config) {
   const output = {
-    removedFiles: /** @type {string[]} */ ([]),
-    newFiles: /** @type {string[]} */ ([])
+    removedFiles: [],
+    newFiles: []
   };
 
   // Run before hook if available
@@ -175,6 +167,7 @@ export async function set(config) {
 
   if (config.set?.path) {
     // Remove vendors
+    // @ts-ignore
     output.removedFiles = await removeVendors(config);
 
     // Get all relevant files and dependencies
@@ -200,6 +193,7 @@ export async function set(config) {
         fileSpecificTransforms
       );
       if (transformedPath) {
+        // @ts-ignore
         output.newFiles.push(optimizePathForWindows(transformedPath));
       }
     }
@@ -217,16 +211,13 @@ export async function set(config) {
  * Removes the file if it contains the banner and applies all transformations.
  * 
  * @param {string} filePath - The path to the file being transformed.
- * @param {Object} config - The configuration object.
- * 
- * @returns {Promise<>} - 
- * Promise that resolves with an object indicating whether the file was removed and the path of the transformed file.
+ * @param {Config} config - The configuration object.
+ * @returns {Promise<void>} A promise that resolves after the file has been processed.
  */
 export async function setFile(config, filePath) {
-
   const fullPath = path.join(config.set.path, filePath);
 
-  // Remove file if it contains the banner (head)
+  // Remove the file if it contains the banner (head)
   if (fs.existsSync(fullPath)) {
     const content = fs.readFileSync(fullPath, 'utf8');
     if (content.includes(bannerTag)) {
