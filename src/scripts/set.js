@@ -103,6 +103,19 @@ async function applyAllTransforms(file, config, globalTransforms, fileSpecificTr
 
   // Write content once if the file is vendorable
   if (!fs.existsSync(transformedPath)) {
+    // Apply inline transforms defined in config.set.transforms
+    if (config.set.transforms && Array.isArray(config.set.transforms)) {
+      for (const inlineTransform of config.set.transforms) {
+        const result = inlineTransform(transformedContent, transformedPath);
+        if (typeof result === 'object') {
+          transformedContent = result.content || transformedContent;
+          transformedPath = result.path || transformedPath;
+        } else {
+          transformedContent = result || transformedContent;
+        }
+      }
+    }
+
     // Apply global transforms
     for (const { transform } of globalTransforms) {
       const result = transform.transform(transformedContent, transformedPath);
@@ -121,19 +134,6 @@ async function applyAllTransforms(file, config, globalTransforms, fileSpecificTr
 
       if (relevantFilePath === transformedPath) {
         transformedContent = transform.transform(transformedContent);
-      }
-    }
-
-    // Apply inline transforms defined in config.set.transforms
-    if (config.set.transforms && Array.isArray(config.set.transforms)) {
-      for (const inlineTransform of config.set.transforms) {
-        const result = inlineTransform(transformedContent, transformedPath);
-        if (typeof result === 'object') {
-          transformedContent = result.content || transformedContent;
-          transformedPath = result.path || transformedPath;
-        } else {
-          transformedContent = result || transformedContent;
-        }
       }
     }
 
