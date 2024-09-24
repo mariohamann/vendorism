@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 /**
  * @typedef {Object} Hooks
  * @property {string} [before] - Command to execute before processing.
