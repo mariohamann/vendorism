@@ -73,3 +73,38 @@ describe('Escaping special characters', () => {
     assert.strictEqual(result, 'Hello Vitest');
   });
 });
+
+describe('Chaining replacements', () => {
+  it('should chain multiple replacements', () => {
+    const result = new StringReplacer('Hello World!')
+      .replace('World', 'Vitest')
+      .replace('Hello', 'Hi')
+      .toString();
+    assert.strictEqual(result, 'Hi Vitest!');
+  });
+
+  it('should chain multiple replacements using delimiters', () => {
+    const result = new StringReplacer('Hello {name}, welcome {name}!')
+      .replace(['{', '}'], 'John Doe')
+      .replace('Hello', 'Hi')
+      .toString();
+    assert.strictEqual(result, 'Hi John Doe, welcome John Doe!');
+  });
+});
+
+describe('Multilines in replace', () => {
+  it('should replace multiline string using exact match', () => {
+    const result = new StringReplacer('Hello\nWorld!').replace('Hello\nWorld!', 'Vitest').toString();
+    assert.strictEqual(result, 'Vitest');
+  });
+
+  it('should replace multiline string using delimiters', () => {
+    const result = new StringReplacer('Hello\n{name}!').replace(['Hello\n', '!'], 'Vitest').toString();
+    assert.strictEqual(result, 'Vitest');
+  });
+
+  it('should replace multiline string using delimiters with multiple occurrences', () => {
+    const result = new StringReplacer('Hello\n{name}!\nHello\n{name}!').replaceAll(['Hello\n', '!'], 'Vitest').toString();
+    assert.strictEqual(result, 'Vitest\nVitest');
+  });
+});
