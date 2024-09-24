@@ -7,6 +7,10 @@ import { set, removeVendors } from '../src/scripts/set.js';
 import { deletePathRecursively } from '../src/scripts/helpers.js'
 import { banners, tag as bannerTag, description as bannerDescription } from '../src/scripts/transforms/banner.js';
 
+/**
+ * Defaults
+ */
+
 const getConfig = () => ({
   "get": {
     "path": "test/source",
@@ -41,6 +45,12 @@ afterEach(async () => {
   deletePathRecursively('./test/target');
   deletePathRecursively('./test/transforms');
 })
+
+/**
+ * Tests
+ */
+
+/* Hooks */
 
 await test('before source hook is working', async (t) => {
   const localConfig = getConfig();
@@ -78,6 +88,8 @@ await test('after target hook is working', async (t) => {
   assert(await checkIfFileExists('./test/target/after.txt'));
 });
 
+/* File removing */
+
 await test('files with default banner are removed', async (t) => {
   await fs.mkdirSync('./test/target', { recursive: true });
   await fs.writeFileSync('./test/target/without-banner.js', 'console.log("Hello World");', 'utf8');
@@ -101,6 +113,8 @@ await test('files with default banner and empty folders are removed recursively'
 
   assert(!await checkIfDirExists('./test/target/sub'));
 });
+
+/* Included files */
 
 await test('included file is copied', async (t) => {
   await get(getConfig());
@@ -135,6 +149,27 @@ await test('included glob is copied without dependencies', async (t) => {
 
 });
 
+/* Dependencies */
+
+await test('dependencies of included file are copied', async (t) => {
+  await get(getConfig());
+  await set(getConfig());
+
+  assert(await checkIfFileExists('./test/target/dependency.js'));
+});
+
+await test('dependencies of included file are not copied when excluded', async (t) => {
+  await get(getConfig());
+
+  const localConfig = getConfig();
+  localConfig.set.excludeDependencies = true;
+  await set(localConfig);
+
+  assert(!await checkIfFileExists('./test/target/dependency.js'));
+});
+
+/* Banners */
+
 await test('included file is copied with default banner', async (t) => {
   await get(getConfig());
   await set(getConfig());
@@ -158,12 +193,59 @@ await test('only files with banner are transformed', async (t) => {
   assert(await !content.includes(bannerTag));
 });
 
-await test('dependencies of included file are copied', async (t) => {
-  await get(getConfig());
-  await set(getConfig());
+await test('banners are set according to their extension', async (t) => {
+  const localConfig = getConfig();
+  localConfig.set.includes = ['extensions/*'];
 
-  assert(await checkIfFileExists('./test/target/dependency.js'));
+  await get(localConfig);
+  await set(localConfig);
+
+  assert(await checkIfFileExists('./test/target/extensions/example.js'));
+  assert(await checkIfFileExists('./test/target/extensions/example.unknown'));
+  assert(await checkIfFileExists('./test/target/extensions/example.html'));
+  assert(await checkIfFileExists('./test/target/extensions/example.njk'));
+  assert(await checkIfFileExists('./test/target/extensions/example.hbs'));
+  assert(await checkIfFileExists('./test/target/extensions/example.md'));
+  assert(await checkIfFileExists('./test/target/extensions/example-with-frontmatter.md'));
+
+  const js = fs.readFileSync('./test/target/extensions/example.js', 'utf8');
+  const unknown = fs.readFileSync('./test/target/extensions/example.unknown', 'utf8');
+  const html = fs.readFileSync('./test/target/extensions/example.html', 'utf8');
+  const njk = fs.readFileSync('./test/target/extensions/example.njk', 'utf8');
+  const hbs = fs.readFileSync('./test/target/extensions/example.hbs', 'utf8');
+  const md = fs.readFileSync('./test/target/extensions/example.md', 'utf8');
+  const mdWithFrontmatter = fs.readFileSync('./test/target/extensions/example-with-frontmatter.md', 'utf8');
+
+  assert(await js.startsWith(banners.default));
+  assert(await unknown.startsWith(banners.default));
+  assert(await html.startsWith(banners.html));
+  assert(await njk.startsWith(banners.jinja2));
+  assert(await hbs.startsWith(banners.handlebars));
+  assert(await md.startsWith(banners.html));
+  assert(await mdWithFrontmatter.includes(banners.frontmatter));
 });
+
+await test('banner are not set if it already exists by custom transform', async (t) => {
+  const localConfig = getConfig();
+
+  localConfig.set.transforms = [
+    (content) => {
+      return `// ${bannerTag}\n\n${content}`;
+    },
+  ];
+
+  await get(localConfig);
+  await set(localConfig);
+
+  assert(await checkIfFileExists('./test/target/index.js'));
+
+  const content = fs.readFileSync('./test/target/index.js', 'utf8');
+
+  assert(await content.includes(bannerTag));
+  assert(await !content.includes(bannerDescription));
+});
+
+/* Output */
 
 await test('vendored files are returned as output.newFiles', async (t) => {
   await get(getConfig());
@@ -187,17 +269,7 @@ await test('removed files are returned as output.newFiles', async (t) => {
   assert(await target.removedFiles.includes('test/target/with-banner.js'));
 });
 
-await test('dependencies of included file are not copied when excluded', async (t) => {
-  await get(getConfig());
-
-  const localConfig = getConfig();
-  localConfig.set.excludeDependencies = true;
-  await set(localConfig);
-
-  assert(!await checkIfFileExists('./test/target/dependency.js'));
-});
-
-
+/* Transforms */
 
 await test('content transforms are applied when only string is returned', async (t) => {
   const localConfig = getConfig();
@@ -269,6 +341,8 @@ await test('file path transforms are applied', async (t) => {
   assert(await content.includes('./transformed-dependency'));
 });
 
+/* Transforms folders */
+
 await test('global transforms are applied to all files', async (t) => {
   const localConfig = getConfig();
   localConfig.set.globalTransformFolder = './test/transforms/global';
@@ -299,56 +373,4 @@ await test('single transforms are applied to specific files', async (t) => {
   const content = fs.readFileSync('./test/target/dependency.js', 'utf8');
 
   assert(await content.includes('Hi World'));
-});
-
-await test('banners are set according to their extension', async (t) => {
-  const localConfig = getConfig();
-  localConfig.set.includes = ['extensions/*'];
-
-  await get(localConfig);
-  await set(localConfig);
-
-  assert(await checkIfFileExists('./test/target/extensions/example.js'));
-  assert(await checkIfFileExists('./test/target/extensions/example.unknown'));
-  assert(await checkIfFileExists('./test/target/extensions/example.html'));
-  assert(await checkIfFileExists('./test/target/extensions/example.njk'));
-  assert(await checkIfFileExists('./test/target/extensions/example.hbs'));
-  assert(await checkIfFileExists('./test/target/extensions/example.md'));
-  assert(await checkIfFileExists('./test/target/extensions/example-with-frontmatter.md'));
-
-  const js = fs.readFileSync('./test/target/extensions/example.js', 'utf8');
-  const unknown = fs.readFileSync('./test/target/extensions/example.unknown', 'utf8');
-  const html = fs.readFileSync('./test/target/extensions/example.html', 'utf8');
-  const njk = fs.readFileSync('./test/target/extensions/example.njk', 'utf8');
-  const hbs = fs.readFileSync('./test/target/extensions/example.hbs', 'utf8');
-  const md = fs.readFileSync('./test/target/extensions/example.md', 'utf8');
-  const mdWithFrontmatter = fs.readFileSync('./test/target/extensions/example-with-frontmatter.md', 'utf8');
-
-  assert(await js.startsWith(banners.default));
-  assert(await unknown.startsWith(banners.default));
-  assert(await html.startsWith(banners.html));
-  assert(await njk.startsWith(banners.jinja2));
-  assert(await hbs.startsWith(banners.handlebars));
-  assert(await md.startsWith(banners.html));
-  assert(await mdWithFrontmatter.includes(banners.frontmatter));
-});
-
-await test('banner are not set if it already exists by custom transform', async (t) => {
-  const localConfig = getConfig();
-
-  localConfig.set.transforms = [
-    (content) => {
-      return `// ${bannerTag}\n\n${content}`;
-    },
-  ];
-
-  await get(localConfig);
-  await set(localConfig);
-
-  assert(await checkIfFileExists('./test/target/index.js'));
-
-  const content = fs.readFileSync('./test/target/index.js', 'utf8');
-
-  assert(await content.includes(bannerTag));
-  assert(await !content.includes(bannerDescription));
 });
