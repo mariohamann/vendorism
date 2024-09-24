@@ -212,3 +212,41 @@ export async function set(config) {
 
   return output;
 }
+
+/**
+ * Removes the file if it contains the banner and applies all transformations.
+ * 
+ * @param {string} filePath - The path to the file being transformed.
+ * @param {Object} config - The configuration object.
+ * 
+ * @returns {Promise<>} - 
+ * Promise that resolves with an object indicating whether the file was removed and the path of the transformed file.
+ */
+export async function setFile(config, filePath) {
+
+  const fullPath = path.join(config.set.path, filePath);
+
+  // Remove file if it contains the banner (head)
+  if (fs.existsSync(fullPath)) {
+    const content = fs.readFileSync(fullPath, 'utf8');
+    if (content.includes(bannerTag)) {
+      fs.unlinkSync(fullPath);
+    }
+  }
+
+  // Load global and file-specific transforms
+  const globalTransforms = config.set.globalTransformFolder
+    ? await loadTransforms(config.set.globalTransformFolder)
+    : [];
+  const fileSpecificTransforms = config.set.fileTransformFolder
+    ? await loadTransforms(config.set.fileTransformFolder)
+    : [];
+
+  // Apply transformations using applyAllTransforms
+  await applyAllTransforms(
+    filePath,
+    config,
+    globalTransforms,
+    fileSpecificTransforms
+  );
+}

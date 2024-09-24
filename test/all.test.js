@@ -3,7 +3,7 @@ import assert from 'node:assert';
 import fs from 'fs';
 import path from 'path';
 import { get } from '../src/scripts/get.js';
-import { set, removeVendors } from '../src/scripts/set.js';
+import { set, setFile, removeVendors } from '../src/scripts/set.js';
 import { deletePathRecursively } from '../src/scripts/helpers.js'
 import { banners, tag as bannerTag, description as bannerDescription } from '../src/scripts/transforms/banner.js';
 
@@ -377,4 +377,33 @@ await test('single transforms are applied to specific files', async (t) => {
   const content = fs.readFileSync('./test/target/dependency.js', 'utf8');
 
   assert(await content.includes('Hi World'));
+});
+
+/* Single file transforms */
+
+await test('setFile transforms are applied', async (t) => {
+  const localConfig = getConfig();
+  const filePath = './index.js';
+
+  localConfig.set.transforms = [
+    (content) => content.replace('log', 'error'),
+  ];
+
+  await setFile(localConfig, filePath);
+
+  assert(await checkIfFileExists('./test/target/index.js'));
+
+  const content = fs.readFileSync('./test/target/index.js', 'utf8');
+  assert(content.includes('console.error'));
+});
+
+await test('only files with banner are transformed in setFile', async (t) => {
+  await get(getConfig());
+  await fs.writeFileSync('./test/target/index.js', 'console.log("Hello World");', 'utf8');
+
+  await setFile(getConfig(), 'index.js');
+
+  const content = fs.readFileSync('./test/target/index.js', 'utf8');
+
+  assert(await !content.includes(bannerTag));
 });
