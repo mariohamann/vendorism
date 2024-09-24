@@ -75,7 +75,7 @@ export async function removeVendors(config) {
  * @returns {Promise<Array>} A promise that resolves with a list of loaded transform functions.
  */
 async function loadTransforms(transformFolder) {
-  const transformFiles = await globby(`${transformFolder}/**/*.js`, { gitignore: true });
+  const transformFiles = await globby(`${transformFolder}/**/*.vendorism.js`, { gitignore: true });
   const transforms = [];
 
   for (const file of transformFiles) {
@@ -116,7 +116,7 @@ async function applyAllTransforms(file, config, globalTransforms, fileSpecificTr
 
     // Apply file-specific transforms
     for (const { transform, path: transformPath } of fileSpecificTransforms) {
-      const strippedPath = transformPath.split(config.set.fileTransformFolder)[1].slice(0, -3); // remove '.js'
+      const strippedPath = transformPath.split(config.set.fileTransformFolder)[1].slice(0, -13); // remove '.js'
       const relevantFilePath = path.join(config.set.path, strippedPath);
 
       if (relevantFilePath === transformedPath) {
