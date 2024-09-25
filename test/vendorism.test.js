@@ -94,6 +94,14 @@ describe('File removing', () => {
     assert(await checkIfFileExists('./test/target/without-banner.js'));
     assert(!await checkIfFileExists('./test/target/with-banner.js'));
   });
+  it('should remove dot files with the default banner', async () => {
+    await fs.writeFileSync('./test/target/.demo.cjs', banners.default + 'console.log("Hello World");', 'utf8');
+
+    const localConfig = getConfig();
+    await removeVendors(localConfig);
+
+    assert(!await checkIfFileExists('./test/target/.demo.cjs'));
+  });
 
   it('should remove files with banner and empty folders recursively', async () => {
     await fs.mkdirSync('./test/target/sub', { recursive: true });
@@ -321,6 +329,23 @@ describe('Transforms', () => {
     const content = fs.readFileSync('./test/target/index.js', 'utf8');
     assert(await content.includes('./transformed-dependency'));
   });
+
+  it('should apply transforms on dotfiles'), async () => {
+    const localConfig = getConfig();
+    localConfig.set.includes = ['.dotfile.js'];
+
+    localConfig.set.transforms = [
+      (content) => content.replace('Hello', 'Goodbye'),
+    ];
+
+    await get(localConfig);
+    await set(localConfig);
+
+    assert(await checkIfFileExists('./test/target/.dotfile.js'));
+
+    const content = fs.readFileSync('./test/target/.dotfile.js', 'utf8');
+    assert(await content.includes('Goodbye'));
+  }
 });
 
 describe('Transforms folders', () => {
@@ -342,6 +367,23 @@ describe('Transforms folders', () => {
     assert(await dependency.includes('transformedDependency'));
   });
 
+  it('should apply global transforms to dotfiles', async () => {
+    const localConfig = getConfig();
+    localConfig.set.globalTransformFolder = './test/transforms/global';
+    fs.renameSync('./test/source/index.js', './test/source/.index.js');
+
+    localConfig.set.includes = ['.index.js'];
+
+    await get(localConfig);
+    await set(localConfig);
+
+    assert(await checkIfFileExists('./test/target/.index.js'));
+
+    const dotfile = fs.readFileSync('./test/target/.index.js', 'utf8');
+
+    assert(await dotfile.includes('transformedDependency'));
+  });
+
   it('should apply single transforms to specific files', async () => {
     const localConfig = getConfig();
     localConfig.set.fileTransformFolder = './test/transforms/single';
@@ -353,6 +395,28 @@ describe('Transforms folders', () => {
 
     const content = fs.readFileSync('./test/target/dependency.js', 'utf8');
     assert(await content.includes('Hi World'));
+  });
+
+  it('should apply single transforms to dotfiles', async () => {
+    const localConfig = getConfig();
+    fs.renameSync('./test/source/index.js', './test/source/.index.js');
+    fs.mkdirSync('./test/transforms/single', { recursive: true });
+
+    fs.writeFileSync('./test/transforms/single/.index.js.vendorism.js',
+      `export const transform = (content) => content.replace('console.log(dependency)', 'console.log("Hello World!)')`, 'utf8'
+    );
+
+    localConfig.set.includes = ['.index.js'];
+    localConfig.set.fileTransformFolder = './test/transforms/single';
+
+    await get(localConfig);
+    await set(localConfig);
+
+    assert(await checkIfFileExists('./test/target/.index.js'));
+
+    const dotfile = fs.readFileSync('./test/target/.index.js', 'utf8');
+
+    assert(await dotfile.includes('Hello World'));
   });
 });
 

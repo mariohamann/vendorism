@@ -44,7 +44,7 @@ async function getDependenciesForIncludedFiles(includedFiles, config) {
  * @returns {Promise<Array.<string>>} A promise that resolves with a list of removed paths.
  */
 export async function removeVendors(config) {
-  const files = await globby(`${config.set.path}/**/*`, config.set.removeVendors?.globby || { gitignore: true });
+  const files = await globby(`${config.set.path}/**/*`, config.set.removeVendors?.globby || { gitignore: true, dot: true });
 
   let removed = [];
   for (const file of files) {
@@ -75,7 +75,7 @@ export async function removeVendors(config) {
  * @returns {Promise<Array>} A promise that resolves with a list of loaded transform functions.
  */
 async function loadTransforms(transformFolder) {
-  const transformFiles = await globby(`${transformFolder}/**/*.vendorism.js`, { gitignore: true });
+  const transformFiles = await globby(`${transformFolder}/**/*.vendorism.js`, { gitignore: true, dot: true });
   const transforms = [];
 
   for (const file of transformFiles) {
@@ -84,6 +84,28 @@ async function loadTransforms(transformFolder) {
   }
 
   return transforms;
+}
+
+/**
+ * Handles the transformation result.
+ * 
+ * @param {string} transformedContent - The current transformed content.
+ * @param {string} transformedPath - The current transformed path.
+ * @param {any} result - The result from a transformation.
+ * @returns {{content: string, path: string}} - The updated content and path after applying the transformation.
+ */
+function handleTransformationResult(transformedContent, transformedPath, result) {
+  if (typeof result === 'object') {
+    return {
+      content: result.content || transformedContent,
+      path: result.path || transformedPath
+    };
+  } else {
+    return {
+      content: result || transformedContent,
+      path: transformedPath
+    };
+  }
 }
 
 /**
@@ -107,24 +129,14 @@ async function applyAllTransforms(file, config, globalTransforms, fileSpecificTr
     if (config.set.transforms && Array.isArray(config.set.transforms)) {
       for (const inlineTransform of config.set.transforms) {
         const result = inlineTransform(transformedContent, transformedPath);
-        if (typeof result === 'object') {
-          transformedContent = result.content || transformedContent;
-          transformedPath = result.path || transformedPath;
-        } else {
-          transformedContent = result || transformedContent;
-        }
+        ({ content: transformedContent, path: transformedPath } = handleTransformationResult(transformedContent, transformedPath, result));
       }
     }
 
     // Apply global transforms
     for (const { transform } of globalTransforms) {
       const result = transform.transform(transformedContent, transformedPath);
-      if (typeof result === 'object') {
-        transformedContent = result.content || transformedContent;
-        transformedPath = result.path || transformedPath;
-      } else {
-        transformedContent = result;
-      }
+      ({ content: transformedContent, path: transformedPath } = handleTransformationResult(transformedContent, transformedPath, result));
     }
 
     // Apply file-specific transforms
@@ -133,7 +145,8 @@ async function applyAllTransforms(file, config, globalTransforms, fileSpecificTr
       const relevantFilePath = path.join(config.set.path, strippedPath);
 
       if (relevantFilePath === transformedPath) {
-        transformedContent = transform.transform(transformedContent);
+        const result = transform.transform(transformedContent);
+        ({ content: transformedContent, path: transformedPath } = handleTransformationResult(transformedContent, transformedPath, result));
       }
     }
 
