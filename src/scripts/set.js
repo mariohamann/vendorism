@@ -8,6 +8,9 @@ import { tag as bannerTag, transform as bannerTransform } from './transforms/ban
 // @ts-ignore
 import('./configTypes.js').Config;
 
+// In-memory cache for transforms
+const transformCache = new Map();
+
 /**
  * Retrieves the dependencies of the specified included files based on the provided configuration.
  * 
@@ -79,7 +82,20 @@ async function loadTransforms(transformFolder) {
   const transforms = [];
 
   for (const file of transformFiles) {
-    const transform = await import(path.resolve(file));
+    const absolutePath = path.resolve(file);
+
+    // If the file is cached, remove it from cache before re-importing
+    if (transformCache.has(absolutePath)) {
+      transformCache.delete(absolutePath);
+    }
+
+    // Dynamically import the fresh version of the transform file
+    const module = await import(absolutePath + `?cache-bust=${Date.now()}`); // Force reload with a cache-busting string
+    const transform = module.default || module; // Handle default export or named export
+
+    // Cache the transform
+    transformCache.set(absolutePath, transform);
+
     transforms.push({ transform, path: file });
   }
 
