@@ -46,11 +46,15 @@ type SetConfig = {
     /**
      * - The folder containing global transform definitions.
      */
-    globalTransformFolder?: any;
+    globalTransformFolder?: string;
     /**
      * - The folder containing file-specific transform definitions.
      */
-    fileTransformFolder?: any;
+    fileTransformFolder?: string;
+    /**
+     * - The folder containing patches to apply to files.
+     */
+    patchFolder?: string;
     /**
      * - Hooks to execute before and after processing.
      */

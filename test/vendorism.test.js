@@ -2,7 +2,7 @@ import { describe, it, afterEach, beforeEach } from 'vitest';
 import assert from 'node:assert';
 import fs from 'fs';
 import path from 'path';
-import { get, set, setFile } from '../src/index.js';
+import { get, set, setFile, createDiff } from '../src/index.js';
 import { removeVendors } from '../src/scripts/set.js';
 import { deletePathRecursively } from '../src/scripts/helpers.js';
 import { banners, tag as bannerTag, description as bannerDescription } from '../src/scripts/transforms/banner.js';
@@ -37,12 +37,14 @@ beforeEach(async () => {
   fs.mkdirSync('./test/target', { recursive: true });
   fs.cpSync('./test/example/source', './test/source', { recursive: true });
   fs.cpSync('./test/example/transforms', './test/transforms', { recursive: true });
+  fs.mkdirSync('./test/patches', { recursive: true });
 });
 
 afterEach(async () => {
   deletePathRecursively('./test/source');
   deletePathRecursively('./test/target');
   deletePathRecursively('./test/transforms');
+  deletePathRecursively('./test/patches');
 });
 
 /**
@@ -445,5 +447,62 @@ describe('Single file transforms', () => {
 
     const content = fs.readFileSync('./test/target/index.js', 'utf8');
     assert(await !content.includes(bannerTag));
+  });
+});
+
+describe('Patches', () => {
+  it('should create a patch after file transformations', async () => {
+    const localConfig = getConfig();
+    localConfig.set.patchFolder = './test/patches';
+    const filePath = 'index.js';
+
+    // Ensure the patch folder exists
+    fs.mkdirSync(localConfig.set.patchFolder, { recursive: true });
+
+    // Apply initial transformations to create the file
+    await get(localConfig);
+    await set(localConfig);
+
+    // Make a manual edit to the file after transformation
+    const transformedFilePath = path.join(localConfig.set.path, filePath);
+    const content = fs.readFileSync(transformedFilePath, 'utf8');
+    await fs.writeFileSync(transformedFilePath, content + '\nconsole.log("Added Content");', 'utf8');
+
+    // Create a patch for the manual edit
+    await createDiff(filePath, localConfig);
+
+    // Check if the patch file exists
+    const patchFileName = filePath.replace(/\//g, ':') + '.vendorism.patch';
+    const patchFilePath = path.join(localConfig.set.patchFolder, patchFileName);
+    assert(await checkIfFileExists(patchFilePath));
+
+    const patchFile = fs.readFileSync(patchFilePath, 'utf8');
+    assert(await patchFile.includes('+console.log("Added Content");'));
+  });
+  it('should apply a patch if it exists', async () => {
+    const localConfig = getConfig();
+    localConfig.set.patchFolder = './test/patches';
+    const filePath = 'index.js';
+
+    // Apply initial transformations to create the file
+    await get(localConfig);
+    await set(localConfig);
+
+    // Make a manual edit to the file after transformation
+    const transformedFilePath = path.join(localConfig.set.path, filePath);
+    const content = fs.readFileSync(transformedFilePath, 'utf8');
+    await fs.writeFileSync(transformedFilePath, content + '\nconsole.log("Added Content");', 'utf8');
+
+    await createDiff(filePath, localConfig);
+
+    deletePathRecursively('./test/target');
+    fs.mkdirSync('./test/target', { recursive: true });
+
+    // Run vendor set again
+    await set(localConfig);
+
+    const finalContent = fs.readFileSync(transformedFilePath, 'utf8');
+
+    assert(await finalContent.includes('console.log("Added Content");'));
   });
 });
