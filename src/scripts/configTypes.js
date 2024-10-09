@@ -20,9 +20,8 @@
  * @property {string[]} includes - The list of files to include in the target.
  * @property {boolean} [excludeDependencies] - Whether to exclude dependencies from the target.
  * @property {Function[]} [transforms] - An array of transform functions that modify file content and paths.
- * @property {string} [globalTransformFolder] - The folder containing global transform definitions.
- * @property {string} [fileTransformFolder] - The folder containing file-specific transform definitions.
- * @property {string} [patchFolder] - The folder containing patches to apply to files.
+ * @property {Object} [globalTransformFolder] - The folder containing global transform definitions.
+ * @property {Object} [fileTransformFolder] - The folder containing file-specific transform definitions.
  * @property {Hooks} [hooks] - Hooks to execute before and after processing.
  * @property {Object} [removeVendors] - Configuration for removing vendors.
  * @property {Object} [removeVendors.globby] - Globby configuration for vendor removal.

@@ -7,14 +7,6 @@
  */
 export function removeVendors(config: Config): Promise<Array<string>>;
 /**
- * Creates a diff between the transformed file and the manually edited file.
- * Saves the diff in the patch folder.
- *
- * @param {string} filePath - The path of the file to create a diff for.
- * @param {Config} config - The configuration object.
- */
-export function createDiff(filePath: string, config: Config): Promise<void>;
-/**
  * Sets up the target based on the provided configuration.
  *
  * @async
