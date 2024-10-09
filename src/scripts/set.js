@@ -316,3 +316,33 @@ export async function setFile(config, filePath) {
     }
   }
 }
+
+/**
+ * Retrieves the content of the specified file based on the provided configuration.
+ *
+ * @param {string} filePath - The path to the file being transformed.
+ * @param {Config} config - The configuration object.
+ * @returns {{content: string, path: string}} - The updated content and path after applying the transformation.
+ */
+
+export async function getFile(config, filePath) {
+  // Load global and file-specific transforms
+  const globalTransforms = config.set.globalTransformFolder
+    ? await loadTransforms(config.set.globalTransformFolder)
+    : [];
+  const fileSpecificTransforms = config.set.fileTransformFolder
+    ? await loadTransforms(config.set.fileTransformFolder)
+    : [];
+
+  // Apply transformations using applyAllTransforms
+  const result = await applyAllTransforms(
+    filePath,
+    config,
+    globalTransforms,
+    fileSpecificTransforms
+  );
+
+  if (result) {
+    return { path: result.path, content: result.content };
+  }
+}

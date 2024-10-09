@@ -25,3 +25,14 @@ export function set(config: Config): Promise<{
  * @returns {Promise<void>} A promise that resolves after the file has been processed.
  */
 export function setFile(config: Config, filePath: string): Promise<void>;
+/**
+ * Retrieves the content of the specified file based on the provided configuration.
+ *
+ * @param {string} filePath - The path to the file being transformed.
+ * @param {Config} config - The configuration object.
+ * @returns {{content: string, path: string}} - The updated content and path after applying the transformation.
+ */
+export function getFile(config: Config, filePath: string): {
+    content: string;
+    path: string;
+};

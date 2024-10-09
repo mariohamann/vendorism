@@ -2,7 +2,7 @@ import { describe, it, afterEach, beforeEach } from 'vitest';
 import assert from 'node:assert';
 import fs from 'fs';
 import path from 'path';
-import { get, set, setFile } from '../src/index.js';
+import { get, set, setFile, getFile } from '../src/index.js';
 import { removeVendors } from '../src/scripts/set.js';
 import { deletePathRecursively } from '../src/scripts/helpers.js';
 import { banners, tag as bannerTag, description as bannerDescription } from '../src/scripts/transforms/banner.js';
@@ -445,5 +445,72 @@ describe('Single file transforms', () => {
 
     const content = fs.readFileSync('./test/target/index.js', 'utf8');
     assert(await !content.includes(bannerTag));
+  });
+});
+
+describe('getFile', () => {
+  it('should return the transformed content and path of the included file', async () => {
+    const localConfig = getConfig();
+
+    // Write the original file in the source path
+    await fs.writeFileSync('./test/source/index.js', 'console.log("Hello World");', 'utf8');
+
+    // Apply transforms to the file
+    localConfig.set.transforms = [
+      (content) => content.replace('Hello', 'Goodbye'),
+    ];
+
+    const result = await getFile(localConfig, 'index.js');
+
+    // Check that the file was transformed correctly
+    assert.strictEqual(result.content.includes('Goodbye World'), true);
+    assert.strictEqual(result.path, path.join(localConfig.set.path, 'index.js'));
+  });
+
+  it('should return the original content if no transforms are applied', async () => {
+    const localConfig = getConfig();
+
+    // Write the original file in the source path
+    await fs.writeFileSync('./test/source/index.js', 'console.log("Hello World");', 'utf8');
+
+    // No transforms applied
+    const result = await getFile(localConfig, 'index.js');
+
+    // Check that the file content remains the same
+    assert.strictEqual(result.content.includes('Hello World'), true);
+    assert.strictEqual(result.path, path.join(localConfig.set.path, 'index.js'));
+  });
+
+  it('should handle global and file-specific transforms', async () => {
+    const localConfig = getConfig();
+
+    // Write the original file in the source path
+    await fs.writeFileSync('./test/source/index.js', 'console.log("Hello World");', 'utf8');
+
+    // Set up global transforms and file-specific transforms
+    localConfig.set.globalTransformFolder = './test/transforms/global';
+    localConfig.set.fileTransformFolder = './test/transforms/single';
+
+    // Create a global transform
+    fs.mkdirSync('./test/transforms/global', { recursive: true });
+    fs.writeFileSync(
+      './test/transforms/global/globalTransform.vendorism.js',
+      `export const transform = (content) => content.replace('console.log', 'console.error');`,
+      'utf8'
+    );
+
+    // Create a file-specific transform
+    fs.mkdirSync('./test/transforms/single', { recursive: true });
+    fs.writeFileSync(
+      './test/transforms/single/index.js.vendorism.js',
+      `export const transform = (content) => content.replace('World', 'Everyone');`,
+      'utf8'
+    );
+
+    const result = await getFile(localConfig, 'index.js');
+
+    // Check that both the global and file-specific transforms were applied
+    assert.strictEqual(result.content.includes('console.error("Hello Everyone");'), true);
+    assert.strictEqual(result.path, path.join(localConfig.set.path, 'index.js'));
   });
 });
